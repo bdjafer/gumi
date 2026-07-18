@@ -1,0 +1,300 @@
+{
+  "owner": "devices/omi-cv1",
+  "profile_schema": "gumi.ble-source-profile/v1",
+  "evidence_kind": "source_declared_expected_profile",
+  "upstream": {
+    "repository": "https://github.com/BasedHardware/omi",
+    "tag": "Omi_CV1_v3.0.20",
+    "commit": "aa1133cd17139aa09cbe4883cdf51f15094b9916"
+  },
+  "advertisement": {
+    "complete_local_name": "Omi",
+    "advertised_service_uuids": [
+      "19b10000-e8f2-537e-4f6c-d104768a1214"
+    ],
+    "scan_response_service_uuids": [
+      "180a"
+    ],
+    "connectable": true,
+    "max_connections": 1
+  },
+  "link_configuration": {
+    "configured_l2cap_tx_mtu": 498,
+    "controller_phys_enabled": [
+      "1m",
+      "2m",
+      "coded"
+    ],
+    "bluetooth_security_manager_enabled": true,
+    "application_requires_security_on_connect": false,
+    "custom_attribute_permissions_require_encryption": false,
+    "custom_attribute_permissions_require_authentication": false
+  },
+  "standard_services": [
+    {
+      "name": "device_information",
+      "uuid": "180a",
+      "expected": true,
+      "values": {
+        "manufacturer_name": "Based Hardware",
+        "model_number": "Omi CV 1",
+        "firmware_revision": "3.0.20",
+        "hardware_revision": "5.0"
+      }
+    },
+    {
+      "name": "battery",
+      "uuid": "180f",
+      "expected": true,
+      "characteristics": [
+        {
+          "name": "battery_level",
+          "uuid": "2a19",
+          "properties": [
+            "read",
+            "notify"
+          ],
+          "encoding": "u8_percent_voltage_estimate"
+        }
+      ]
+    },
+    {
+      "name": "mcumgr_smp",
+      "uuid": "8d53dc1d-1db7-4cd3-868b-8a527460aa84",
+      "expected": true,
+      "generated_by": "CONFIG_NCS_SAMPLE_MCUMGR_BT_OTA_DFU"
+    }
+  ],
+  "custom_services": [
+    {
+      "name": "audio",
+      "uuid": "19b10000-e8f2-537e-4f6c-d104768a1214",
+      "compiled": true,
+      "characteristics": [
+        {
+          "name": "audio_data",
+          "uuid": "19b10001-e8f2-537e-4f6c-d104768a1214",
+          "properties": [
+            "read",
+            "notify"
+          ],
+          "permissions": [
+            "read"
+          ],
+          "read_value": "empty",
+          "notification_encoding": "raw_opus_packet"
+        },
+        {
+          "name": "audio_codec",
+          "uuid": "19b10002-e8f2-537e-4f6c-d104768a1214",
+          "properties": [
+            "read"
+          ],
+          "permissions": [
+            "read"
+          ],
+          "read_hex": "15",
+          "meaning": "Omi codec id 21, Opus"
+        },
+        {
+          "name": "speaker_audio",
+          "uuid": "19b10003-e8f2-537e-4f6c-d104768a1214",
+          "compiled": false,
+          "reason": "CONFIG_OMI_ENABLE_SPEAKER=n"
+        }
+      ]
+    },
+    {
+      "name": "settings",
+      "uuid": "19b10010-e8f2-537e-4f6c-d104768a1214",
+      "compiled": true,
+      "characteristics": [
+        {
+          "name": "led_dim_ratio",
+          "uuid": "19b10011-e8f2-537e-4f6c-d104768a1214",
+          "properties": [
+            "read",
+            "write"
+          ],
+          "permissions": [
+            "read",
+            "write"
+          ],
+          "encoding": "u8_clamped_0_to_100_persisted"
+        },
+        {
+          "name": "microphone_gain",
+          "uuid": "19b10012-e8f2-537e-4f6c-d104768a1214",
+          "properties": [
+            "read",
+            "write"
+          ],
+          "permissions": [
+            "read",
+            "write"
+          ],
+          "encoding": "u8_clamped_0_to_8_persisted"
+        },
+        {
+          "name": "charging_status",
+          "uuid": "19b10013-e8f2-537e-4f6c-d104768a1214",
+          "properties": [
+            "read",
+            "notify"
+          ],
+          "permissions": [
+            "read"
+          ],
+          "encoding": "u8_boolean"
+        }
+      ]
+    },
+    {
+      "name": "features",
+      "uuid": "19b10020-e8f2-537e-4f6c-d104768a1214",
+      "compiled": true,
+      "characteristics": [
+        {
+          "name": "feature_bits",
+          "uuid": "19b10021-e8f2-537e-4f6c-d104768a1214",
+          "properties": [
+            "read"
+          ],
+          "permissions": [
+            "read"
+          ],
+          "encoding": "u32_little_endian",
+          "expected_hex": "ec010000",
+          "enabled_bits": [
+            "button",
+            "battery",
+            "haptic",
+            "offline_storage",
+            "led_dimming",
+            "microphone_gain"
+          ],
+          "disabled_bits": [
+            "speaker",
+            "accelerometer",
+            "usb"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "time_sync",
+      "uuid": "19b10030-e8f2-537e-4f6c-d104768a1214",
+      "compiled": true,
+      "characteristics": [
+        {
+          "name": "set_epoch",
+          "uuid": "19b10031-e8f2-537e-4f6c-d104768a1214",
+          "properties": [
+            "write"
+          ],
+          "permissions": [
+            "write"
+          ],
+          "encoding": "u32_native_little_endian_epoch_seconds"
+        },
+        {
+          "name": "get_epoch",
+          "uuid": "19b10032-e8f2-537e-4f6c-d104768a1214",
+          "properties": [
+            "read"
+          ],
+          "permissions": [
+            "read"
+          ],
+          "encoding": "u32_native_little_endian_epoch_seconds"
+        }
+      ]
+    },
+    {
+      "name": "storage",
+      "uuid": "30295780-4301-eabd-2904-2849adfeae43",
+      "compiled": true,
+      "characteristics": [
+        {
+          "name": "control_and_data",
+          "uuid": "30295781-4301-eabd-2904-2849adfeae43",
+          "properties": [
+            "write",
+            "notify"
+          ],
+          "permissions": [
+            "write"
+          ],
+          "encoding_contract": "../ring-v1/fixtures.json"
+        },
+        {
+          "name": "status",
+          "uuid": "30295782-4301-eabd-2904-2849adfeae43",
+          "properties": [
+            "read",
+            "notify"
+          ],
+          "permissions": [
+            "read"
+          ],
+          "encoding": "four_u32_little_endian"
+        }
+      ]
+    },
+    {
+      "name": "button",
+      "uuid": "23ba7924-0000-1000-7450-346eac492e92",
+      "compiled": true,
+      "characteristics": [
+        {
+          "name": "button_event",
+          "uuid": "23ba7925-0000-1000-7450-346eac492e92",
+          "properties": [
+            "read",
+            "notify"
+          ],
+          "permissions": [
+            "read"
+          ],
+          "encoding": "two_native_int32_little_endian",
+          "payload_size_bytes": 8,
+          "source_reachable_first_values": {
+            "single_tap": 1,
+            "double_tap": 2,
+            "release": 5
+          },
+          "source_caveat": "press and long-tap notifier functions exist but are not called; a 3-second hold powers off"
+        }
+      ]
+    },
+    {
+      "name": "haptic",
+      "uuid": "cab1ab95-2ea5-4f4d-bb56-874b72cfc984",
+      "compiled": true,
+      "characteristics": [
+        {
+          "name": "haptic_pattern",
+          "uuid": "cab1ab96-2ea5-4f4d-bb56-874b72cfc984",
+          "properties": [
+            "write"
+          ],
+          "permissions": [
+            "write"
+          ],
+          "encoding": "u8_enum",
+          "values": {
+            "1": "100_ms",
+            "2": "300_ms",
+            "3": "500_ms"
+          }
+        }
+      ]
+    },
+    {
+      "name": "accelerometer",
+      "uuid": "32403790-0000-1000-7450-bf445e5829a2",
+      "compiled": false,
+      "reason": "CONFIG_OMI_ENABLE_ACCELEROMETER=n"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Editors and local tooling
+.idea/
+.vscode/
+*.swp
+
+# Firmware toolchains and build output
+devices/omi-cv1/firmware/v2.9.0/
+devices/omi-cv1/firmware/build/
+devices/omi-cv1/firmware/omi/prj.conf
+
+# Dart / Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+
+# Rust
+target/
+
+# Local captures, media, credentials, and device exports
+local/
+captures/
+*.pcap
+*.pcapng
+*.har
+*.pem
+*.key

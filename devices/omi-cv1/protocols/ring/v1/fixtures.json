@@ -1,0 +1,263 @@
+{
+  "owner": "devices/omi-cv1",
+  "fixture_schema": "gumi.byte-fixtures/v1",
+  "wire_protocol": "omi.ring/v1",
+  "upstream": {
+    "repository": "https://github.com/BasedHardware/omi",
+    "commit": "aa1133cd17139aa09cbe4883cdf51f15094b9916",
+    "license": "MIT"
+  },
+  "constants": {
+    "record_size_bytes": 444,
+    "timestamp_size_bytes": 4,
+    "audio_payload_size_bytes": 440,
+    "storage_service_uuid": "30295780-4301-eabd-2904-2849adfeae43",
+    "storage_control_uuid": "30295781-4301-eabd-2904-2849adfeae43",
+    "storage_status_uuid": "30295782-4301-eabd-2904-2849adfeae43",
+    "commands": {
+      "stop": 3,
+      "info": 16,
+      "read": 17,
+      "advance": 18,
+      "clear": 19
+    },
+    "notifications": {
+      "ack": 1,
+      "info": 2,
+      "data": 3,
+      "done": 4,
+      "read_begin": 5
+    }
+  },
+  "cases": [
+    {
+      "id": "status-read-four-little-endian-u32",
+      "operation": "decode_status",
+      "input": {
+        "hex": "d20400002a0000009f86010001000000"
+      },
+      "expect": {
+        "used_bytes": 1234,
+        "unread_packets": 42,
+        "free_bytes": 99999,
+        "rtc_valid": 1
+      }
+    },
+    {
+      "id": "status-read-truncated",
+      "operation": "decode_status",
+      "input": {
+        "hex": "00010203"
+      },
+      "expect": {
+        "error": "truncated"
+      }
+    },
+    {
+      "id": "info-notification",
+      "operation": "decode_notification",
+      "input": {
+        "hex": "0200000000000003e800000000000005dc00001000000000000000000701bc"
+      },
+      "expect": {
+        "type": "info",
+        "read_sequence": "1000",
+        "write_sequence": "1500",
+        "capacity_packets": 4096,
+        "dropped_packets": "7",
+        "packet_size_bytes": 444,
+        "unread_packets": "500"
+      }
+    },
+    {
+      "id": "done-notification-success",
+      "operation": "decode_notification",
+      "input": {
+        "hex": "04000000000000003039"
+      },
+      "expect": {
+        "type": "done",
+        "status": 0,
+        "next_sequence": "12345"
+      }
+    },
+    {
+      "id": "done-notification-error",
+      "operation": "decode_notification",
+      "input": {
+        "hex": "04060000000000000000"
+      },
+      "expect": {
+        "type": "done",
+        "status": 6,
+        "next_sequence": "0"
+      }
+    },
+    {
+      "id": "read-begin-notification",
+      "operation": "decode_notification",
+      "input": {
+        "hex": "0500000000000003e700000032"
+      },
+      "expect": {
+        "type": "read_begin",
+        "transfer_start_sequence": "999",
+        "packet_count": 50
+      }
+    },
+    {
+      "id": "encode-info-command",
+      "operation": "encode_command",
+      "input": {
+        "command": "info"
+      },
+      "expect": {
+        "hex": "10"
+      }
+    },
+    {
+      "id": "encode-read-command-without-count",
+      "operation": "encode_command",
+      "input": {
+        "command": "read",
+        "start_sequence_hex": "0123456789abcdef"
+      },
+      "expect": {
+        "hex": "110123456789abcdef"
+      }
+    },
+    {
+      "id": "encode-read-command-with-count",
+      "operation": "encode_command",
+      "input": {
+        "command": "read",
+        "start_sequence": "1",
+        "packet_count": 100
+      },
+      "expect": {
+        "hex": "11000000000000000100000064"
+      }
+    },
+    {
+      "id": "encode-advance-command",
+      "operation": "encode_command",
+      "input": {
+        "command": "advance",
+        "new_read_sequence_hex": "00000000cafebabe"
+      },
+      "expect": {
+        "hex": "1200000000cafebabe"
+      }
+    },
+    {
+      "id": "audio-one-frame-and-padding",
+      "operation": "decode_audio_payload",
+      "input": {
+        "parts": [
+          {
+            "u8": 3
+          },
+          {
+            "hex": "aabbcc"
+          },
+          {
+            "repeat": {
+              "hex": "00",
+              "count": 436
+            }
+          }
+        ]
+      },
+      "expect": {
+        "frames_hex": [
+          "aabbcc"
+        ]
+      }
+    },
+    {
+      "id": "audio-exact-end-boundary-is-dropped",
+      "operation": "decode_audio_payload",
+      "input": {
+        "parts": [
+          {
+            "u8": 2
+          },
+          {
+            "hex": "aabb"
+          }
+        ]
+      },
+      "expect": {
+        "frames_hex": [],
+        "reason": "firmware overflow artifact guard uses greater-than-or-equal boundary"
+      }
+    },
+    {
+      "id": "reassemble-record-at-arbitrary-ble-boundary",
+      "operation": "reassemble_and_decode_record",
+      "input": {
+        "record": {
+          "parts": [
+            {
+              "hex": "deadbeef03aabbcc"
+            },
+            {
+              "repeat": {
+                "hex": "00",
+                "count": 436
+              }
+            }
+          ]
+        },
+        "split_at_offsets": [
+          137
+        ]
+      },
+      "expect": {
+        "records": 1,
+        "pending_bytes": 0,
+        "timestamp": 3735928559,
+        "frames_hex": [
+          "aabbcc"
+        ]
+      }
+    },
+    {
+      "id": "reassemble-two-notification-patterns",
+      "operation": "reassemble_records",
+      "input": {
+        "chunks": [
+          {
+            "repeat": {
+              "hex": "11",
+              "count": 300
+            }
+          },
+          {
+            "repeat": {
+              "hex": "22",
+              "count": 144
+            }
+          }
+        ]
+      },
+      "expect": {
+        "records": 1,
+        "record_size_bytes": 444,
+        "pending_bytes": 0,
+        "segments": [
+          {
+            "start": 0,
+            "end_exclusive": 300,
+            "hex": "11"
+          },
+          {
+            "start": 300,
+            "end_exclusive": 444,
+            "hex": "22"
+          }
+        ]
+      }
+    }
+  ]
+}
