@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+
+repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+java_home="$repo_dir/local/toolchains/jdk-17.0.19+10/Contents/Home"
+android_sdk="$repo_dir/local/toolchains/android-sdk"
+
+if [ ! -x "$java_home/bin/java" ]; then
+    echo "Missing workspace JDK at $java_home" >&2
+    echo "Follow docs/development/bootstrap.md before running the build." >&2
+    exit 1
+fi
+
+if [ ! -x "$android_sdk/cmdline-tools/latest/bin/sdkmanager" ]; then
+    echo "Missing workspace Android SDK at $android_sdk" >&2
+    echo "Follow docs/development/bootstrap.md before running the build." >&2
+    exit 1
+fi
+
+export JAVA_HOME="$java_home"
+export GRADLE_USER_HOME="$repo_dir/local/gradle-home"
+export ANDROID_SDK_ROOT="$android_sdk"
+export ANDROID_USER_HOME="$repo_dir/local/android-user-home"
+
+exec "$repo_dir/gradlew" "$@"

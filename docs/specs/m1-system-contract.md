@@ -204,6 +204,9 @@ successful write using composed function authority is not evidence the caller he
 
 ## Security and privacy invariants
 
+- Device ownership, proximity, button input, and a lit indicator are not substitutes for participant
+  consent. Gumi starts no capture until an explicit local action and an applicable consent policy permit
+  it; deployments remain responsible for the rules in their jurisdiction and context.
 - Physical indication follows actual microphone acquisition, not requested state.
 - Idle and Recording are distinguishable without opening the mobile app.
 - Device, edge host, user, ingest session, and Astrale function are separate identities.
@@ -219,6 +222,9 @@ successful write using composed function authority is not evidence the caller he
   where supported.
 - Logs contain identifiers and state transitions, not raw audio or credentials.
 - Cloud unavailability cannot silently change local capture truth or physical safety behavior.
+- Media already present on a newly adopted device is quarantined. Gumi does not read, transcribe,
+  upload, advance, or clear it until the owner explicitly chooses an import or deletion workflow that
+  states the consequence and preserves recovery evidence.
 
 ## Failure and recovery matrix
 
@@ -254,12 +260,14 @@ The detailed evidence and exit criteria for these gates are maintained in the
 8. **Qualification gate**: privacy, security, power, loss/recovery, deletion, OTA, and complete physical
    device-to-Astrale acceptance suite.
 
-## Open decisions, in order
+## Decision queue
 
-1. Exact hardware/firmware revision and OTA image-slot state from the
-   [Android read-only probe](../../devices/omi-cv1/docs/research/android-read-only-probe.md).
-2. Exact Android/Kotlin/Gradle pins after the Android + Linux/JVM bootstrap compiles and tests.
-3. Metadata database and spool encryption after crash, migration, and key-rotation tests.
-4. Capture retention defaults and whether acoustic AAD is ever enabled in Idle.
-5. Emergency physical power/reset gesture after hold-to-talk takes ownership of long press.
-6. Object store, realtime transport, transcription providers, and regional deployment requirements.
+| Decision | State / next evidence |
+| --- | --- |
+| Exact hardware/firmware identity | Model, hardware 5.0, firmware 3.0.12, and GATT profile observed; MCU image-state read pending |
+| Android/Kotlin/Gradle pins | Resolved for the current bootstrap and recorded in Decision 0001; re-open only from measured incompatibility |
+| Existing stock media disposition | Quarantined; explicit import/delete consent flow required before any ring read, advance, or clear |
+| Metadata database and spool encryption | Crash, migration, key-loss, and rotation spike before durable audio |
+| Capture consent/retention and Idle AAD defaults | Product/privacy policy plus physical battery and microphone-off measurements before capture firmware |
+| Emergency power/reset gesture | Gesture reliability evidence before hold-to-talk owns long press |
+| Object store, region, realtime transport, and AI providers | API contracts and representative quality/latency/privacy/cost evaluation before implementation |

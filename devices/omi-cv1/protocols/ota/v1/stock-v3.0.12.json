@@ -1,0 +1,111 @@
+{
+  "owner": "devices/omi-cv1",
+  "fixture_schema": "gumi.omi-cv1.ota-observation/v1",
+  "evidence_kind": "published_release_artifact",
+  "release": {
+    "tag": "Omi_CV1_v3.0.12",
+    "source_commit": "85159556eac753a088c5efd1b419a5a867508e27",
+    "url": "https://github.com/BasedHardware/omi/releases/download/Omi_CV1_v3.0.12/Omi_CV1_OTA_v3.0.12.zip",
+    "filename": "Omi_CV1_OTA_v3.0.12.zip",
+    "size_bytes": 404954,
+    "sha256": "821ce06d73f8bb3695de70dce0880a00597dd71175a843d08e577d775125ab4e"
+  },
+  "manifest": {
+    "format_version": 1,
+    "name": "omi",
+    "time_epoch_s": 1759922507,
+    "time_utc": "2025-10-08T11:21:47Z"
+  },
+  "compatibility_signer": {
+    "algorithm": "RSA-2048",
+    "keyhash_sha256": "fc5701dc6135e1323847bdc40f04d2e5bee5833b23c29f93593d00018cfa9994",
+    "upstream_private_key_path": "omi/firmware/bootloader/mcuboot/root-rsa-2048.pem",
+    "upstream_key_file_sha256": "1fc912d30251b821f251e127d4daf7ba9338dd5c04e5af100abfb5b7c7d4c022",
+    "publicly_exposed_upstream": true,
+    "gumi_trust_authority": false
+  },
+  "images": [
+    {
+      "file": "omi.signed.bin",
+      "type": "application",
+      "board": "omi",
+      "soc": "nrf5340",
+      "image_index": 0,
+      "slot_index_primary": 1,
+      "slot_index_secondary": 2,
+      "manifest_load_address": 66048,
+      "manifest_size_bytes": 228632,
+      "file_sha256": "877990aabf267fb3f281803cfa3c2aec8f29a86bfa8fb4c05c79a024b07db9db",
+      "header": {
+        "magic": "96f3b83d",
+        "load_address": 0,
+        "header_size_bytes": 512,
+        "protected_tlv_size_bytes": 0,
+        "payload_size_bytes": 227784,
+        "flags": 0,
+        "version": "0.0.0+0"
+      },
+      "tlvs": {
+        "sha256": "0eed1a42063975be5f8aee0e0df710122de445f7473681ba780bdcdad2fe7b36",
+        "keyhash_sha256": "fc5701dc6135e1323847bdc40f04d2e5bee5833b23c29f93593d00018cfa9994",
+        "signature": "RSA-2048",
+        "security_counter": null
+      },
+      "signature_verified": true
+    },
+    {
+      "file": "ipc_radio.bin",
+      "type": "application",
+      "board": "omi/nrf5340/cpunet",
+      "soc": "nrf5340",
+      "image_index": 1,
+      "slot_index_primary": 3,
+      "slot_index_secondary": 4,
+      "manifest_load_address": 16812032,
+      "manifest_size_bytes": 175092,
+      "file_sha256": "0e1d067444ca78dd4ea64cb355bc167c1155b84f49b0c7028112c9930602d2a5",
+      "header": {
+        "magic": "96f3b83d",
+        "load_address": 0,
+        "header_size_bytes": 512,
+        "protected_tlv_size_bytes": 0,
+        "payload_size_bytes": 174244,
+        "flags": 0,
+        "version": "0.0.0+0"
+      },
+      "tlvs": {
+        "sha256": "267b11e2d413acebb874c76204be9f5f3872b9d033bd228ba5bcd46a27903089",
+        "keyhash_sha256": "fc5701dc6135e1323847bdc40f04d2e5bee5833b23c29f93593d00018cfa9994",
+        "signature": "RSA-2048",
+        "security_counter": null
+      },
+      "inner_secure_boot_validation": {
+        "scheme": "Nordic Secure Immutable Boot",
+        "metadata_file_offset": 174580,
+        "metadata_size_bytes": 176,
+        "magic_words_little_endian": [
+          "0x281ee6de",
+          "0x86518483",
+          "0x00013502"
+        ],
+        "firmware_address": 16812032,
+        "firmware_sha256": "f09e4b27f9cbf7edf350196f9c60e9cda786ace34e5b173bc2576dbed8479c7a",
+        "public_key": {
+          "algorithm": "ECDSA P-256",
+          "format": "raw x-coordinate concatenated with y-coordinate",
+          "size_bytes": 64,
+          "sha256": "fbe5bac7a49e0f37680b05f3b5a6078d772277de0a5b5963f7f51df677ef9c89"
+        },
+        "signature_size_bytes": 64,
+        "signature_verified": true
+      },
+      "signature_verified": true
+    }
+  ],
+  "inspection": {
+    "tool": "imgtool",
+    "tool_version": "2.4.0",
+    "performed_utc_date": "2026-07-19",
+    "device_was_contacted": false
+  }
+}

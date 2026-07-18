@@ -1,7 +1,7 @@
 # Omi CV1 stock OTA inspection: v3.0.20
 
-Status: published artifact decoded, signatures verified, and exact-source build compared; owned-device
-slot state still pending.
+Status: installed-release and baseline-candidate artifacts decoded and signatures verified; v3.0.20
+exact-source build compared; owned-device slot state still pending.
 
 This report is about the official release bundle, not yet about the exact images installed on the
 project's sealed pendant.
@@ -20,6 +20,27 @@ project's sealed pendant.
 
 The checked-in machine-readable observation is
 [`protocols/ota/v1/stock-v3.0.20.json`](../../protocols/ota/v1/stock-v3.0.20.json).
+
+## Installed-release v3.0.12 oracle
+
+The owned unit reports `3.0.12`, so its matching official release was inspected separately before any
+MCU Manager request. This is the comparison oracle for the pending image-state read, not an assertion
+that the sealed unit contains those bytes until its returned hashes match.
+
+| Field | Published v3.0.12 value |
+| --- | --- |
+| Release | [`Omi_CV1_v3.0.12`](https://github.com/BasedHardware/omi/releases/tag/Omi_CV1_v3.0.12), commit `85159556eac753a088c5efd1b419a5a867508e27` |
+| Bundle | `Omi_CV1_OTA_v3.0.12.zip`, `404954` bytes |
+| Bundle SHA-256 | `821ce06d73f8bb3695de70dce0880a00597dd71175a843d08e577d775125ab4e` |
+| Application image `0` MCUboot hash | `0eed1a42063975be5f8aee0e0df710122de445f7473681ba780bdcdad2fe7b36` |
+| Network image `1` MCUboot hash | `267b11e2d413acebb874c76204be9f5f3872b9d033bd228ba5bcd46a27903089` |
+| MCUboot header version | `0.0.0+0` for both images |
+| Signature result | Both outer RSA-2048 signatures and the network image's inner ECDSA P-256 signature verified |
+
+The complete file/header/TLV/NSIB evidence is
+[`protocols/ota/v1/stock-v3.0.12.json`](../../protocols/ota/v1/stock-v3.0.12.json).
+The official release ZIP SHA-256 was checked independently against GitHub's published asset digest.
+No release binary or signing key is stored in this repository.
 
 ## Package layout
 

@@ -1,6 +1,7 @@
 # Omi CV1 capability audit
 
-Status: device-owned source and release audit complete; physical-unit measurements pending.
+Status: source/release audit complete; owned-unit identity, advertisement, and GATT baseline measured;
+behavior, audio, power, storage semantics, and MCU image state remain pending.
 
 The exact component/pin/storage/power breakdown is maintained in
 [component-map.md](component-map.md); this document is the decision-oriented capability matrix.
@@ -26,6 +27,10 @@ Pinned upstream references:
 - official OTA artifact: `Omi_CV1_OTA_v3.0.20.zip`, SHA-256
   `dfc7ea6986d9b02fe899a38afc6c9bf6fabb9cff669244fbf20a3d7abeda59da`.
 
+The owned unit currently reports firmware `3.0.12`, hardware `5.0`, and the exact
+[observed v3.0.12 GATT profile](../../protocols/gatt/v3.0.12/README.md). This is the bench baseline;
+v3.0.20 remains the candidate recovery/customization baseline, not a claim about installed state.
+
 The open source repository is MIT licensed. Nordic SDK modules and other dependencies retain their own
 licenses.
 
@@ -33,15 +38,15 @@ licenses.
 
 | Capability | Component | Source/release reality | Bench work | M1 disposition |
 | --- | --- | --- | --- | --- |
-| Compute | nRF5340 dual-core Cortex-M33 | Application and network cores are built as a multi-image NCS 2.9.0 system | Read model, hardware revision, firmware revision, and image slots | Reuse the existing board and sysbuild definitions |
+| Compute | nRF5340 dual-core Cortex-M33 | Application and network cores are built as a multi-image NCS system | Model `Omi CV 1`, hardware `5.0`, firmware `3.0.12` read; image slots pending | Reuse the existing board and sysbuild definitions |
 | Audio input | Two T5838 PDM microphones | 16 kHz, 16-bit interleaved capture; firmware averages both channels to mono and encodes Opus | Capture each channel separately; measure noise, clipping, channel identity, and current draw | Reuse PDM and Opus paths; preserve stereo during experiments |
 | Acoustic activity | T5838 AAD support | Current configuration combines software VAD with hardware acoustic activity detection | Measure wake latency, false activation, and silence current | Optional power mechanism, never a substitute for explicit recording state |
 | Button | One tactile button | Current firmware emits single/double-tap events; long press powers off | Measure debounce and gesture reliability while worn | Double-tap toggles capture; hold-to-talk reserved; power-off mapping remains an explicit decision |
 | Feedback | RGB LEDs and vibration motor | LED, haptic, battery, and charging services exist | Verify visibility in daylight, haptic strength, and indicator timing | Mandatory truthful capture and fault indication |
 | Motion | LSM6DS3TR-C six-axis IMU | Physical component is present. The pristine release build compiles I2C and the LSM6DSL driver, but disables the application accelerometer capability, its GATT service, and configured sampling | Identify device address and validate FIFO, interrupt, tap, and power modes | Latent capability; not on the critical audio path |
-| BLE | nRF5340 radio | Active GATT data plane, 2M/Coded PHY configuration, large MTU, one connection, OTA, live audio, and offline sync | Export the exact GATT table, negotiated MTU/PHY, throughput, reconnection, range, and background behavior | Primary device-to-edge transport for M1 |
+| BLE | nRF5340 radio | Active GATT data plane, 2M/Coded PHY configuration, one connection, OTA, live audio, and offline sync | 11 services/21 characteristics, unbonded link, MTU 23 without request, and 2M/2M PHY observed; throughput/reconnect/background pending | Primary device-to-edge transport for M1 |
 | Wi-Fi | nRF7002 companion | Present in board definitions; no qualified current application-level path to depend on; v3.0.17 release notes explicitly disabled it for improved BLE sync | Only probe after BLE M1 is stable | Out of M1 critical path |
-| Offline media | NAND/SD-style storage plus firmware ring | Current v3.0.20 ring record is 444 bytes: 4-byte timestamp plus 440-byte packed Opus payload. Documentation, part description, and firmware usable ceiling disagree | Read JEDEC/device identity if exposed; measure real capacity, write endurance proxy, overwrite behavior, and power-loss recovery | Reuse the ring protocol initially; do not promise offline duration yet |
+| Offline media | NAND/SD-style storage plus firmware ring | v3.0.12 exposes two file-size words; v3.0.20 changes status to four words and uses 444-byte ring records. Documentation, part description, and firmware usable ceiling disagree | Owned unit returned file sizes 505,118,720 and 0 bytes; semantics, capacity, endurance, overwrite, and recovery remain unqualified | Version the legacy/new storage contracts; do not promise offline duration yet |
 | OTA staging | External SPI NOR and MCUboot partitions | Published OTA is a signed two-image MCU Manager package. Both v3.0.20 images are `0.0.0+0` and verify against the exposed outer RSA key. A clean build reproduces the app payload but auto-generates a different inner NSIB key for the network image | Read installed image slots/hashes without uploading; then perform an application-only equal-version canary/recovery round trip | Reuse MCUboot/MCUmgr for image `0`; retain `0.0.0+0`; do not write a locally generated image `1` |
 | Power | 150 mAh LiPo, charger, buck, protection | Battery and charging telemetry are exposed | Profile Idle, Recording, VoiceTurn, Syncing, and Updating separately | Battery budget becomes a release gate |
 | Debug | SWD/reset/test signals in the board design | Official direct-flash documentation calls for a J-Link and special cable | No opening and no debug probe in the current project constraint | OTA-first; direct programming is a recovery/security contingency only |

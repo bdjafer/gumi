@@ -1,7 +1,8 @@
 # Decision 0001: Android-first edge technology spine
 
-Status: accepted direction for M1; exact tool versions and persistence implementation remain gated by
-the bootstrap spike. Evidence refreshed 2026-07-18.
+Status: accepted direction for M1; core tool versions are bootstrap-pinned, while persistence,
+connected-device lifecycle, audio transport, and the mutating updater remain gated. Evidence refreshed
+2026-07-18.
 
 ## Decision
 
@@ -20,8 +21,19 @@ The M1 Raspberry Pi target is JVM on Linux ARM64, not Kotlin/Native. This keeps 
 without introducing JNI/FFI into the Android critical path. Architecture ports, capability contracts,
 and conformance tests—not a particular binary format—provide substrate independence.
 
-Exact Kotlin, Android Gradle Plugin, Gradle, Compose, Nordic, and coroutine versions are pinned only
-after a minimal Android + Linux/JVM workspace compiles and tests together.
+The first Android + Linux/JVM workspace now compiles and tests together with these pins:
+
+| Layer | Pin |
+| --- | --- |
+| JDK / Gradle / Android Gradle Plugin | Temurin `17.0.19+10` / `9.5.0` / `9.3.0` |
+| Kotlin / coroutines / serialization | `2.4.10` / `1.11.0` / `1.11.0` |
+| Android SDK / target / Build Tools | compile `37.0` / target `36` / `36.0.0` |
+| Compose | BOM `2026.06.01`, Activity Compose `1.13.0` |
+| BLE / firmware inspection | Nordic BLE `2.11.0`, Device Manager `2.8.0`; GATT and image-state adapters build and lint |
+
+The checksums, package identifiers, and reproduction procedure live in
+[the edge bootstrap runbook](../development/bootstrap.md). The Android target stays at 36 until Android
+37 behavior is exercised on a physical handset; compiling against 37.0 does not claim that qualification.
 
 ## Why this direction
 
@@ -54,9 +66,11 @@ timeouts, errors, coroutines, and notification `Flow`s. Its announced replacemen
 still described by Nordic as early-stage and not recommended for production, so M1 stays on maintained
 2.x behind a replaceable port.
 
-[Nordic Android Device Manager](https://github.com/NordicSemiconductor/Android-nRF-Connect-Device-Manager)
-3.3.1 already implements MCU Manager image listing and upload for Zephyr/NCS. Gumi uses its single-image
-application path and never hands the canary updater an unqualified multi-image bundle.
+[Nordic Android Device Manager](https://github.com/NordicSemiconductor/Android-nRF-Connect-Device-Manager/tree/559724446b113f46fc60324df4dfd1160faa2a02)
+2.8.0 implements MCU Manager image listing and upload for Zephyr/NCS and resolves to the same Nordic BLE
+2.11.0 used by Gumi. The landed inspection adapter exposes only image listing and explicitly discloses
+the transient CCCD and request-characteristic writes required by the response protocol. The future
+updater uses the single-image application path and never receives an unqualified multi-image bundle.
 
 ## Omi reuse audit
 
@@ -142,6 +156,21 @@ This decision becomes fully pinned only when one small workspace proves all of t
 5. The Android shell renders runtime projections and invokes commands without owning protocol state.
 6. A Linux/JVM executable runs the same simulated capture, spool, restart, and resume scenario.
 7. Dependency/import checks fail intentionally introduced Android, Omi, and cloud leaks.
+
+Bootstrap progress on 2026-07-18:
+
+| Item | Evidence | State |
+| --- | --- | --- |
+| 1 | SDK/runtime common tests execute as JVM tests and Android host tests | Proven |
+| 2 | The common runtime registry tests register stub providers; runtime depends only on SDK | Proven |
+| 3 | Android scan port/adapter exists and passes lint; connect/read/write/notify/MTU remain open | Partial |
+| 4 | All 14 device-owned ring cases pass in the portable Omi driver module | Proven |
+| 5 | Compose renders the shared registry projection; command surface is not implemented | Partial |
+| 6 | Linux/JVM runs the same driver/registry composition; capture/spool/restart is not implemented | Partial |
+| 7 | One negative probe containing Android, cloud, and Omi imports was rejected by the boundary check | Proven |
+
+Therefore the technology spine and its versions are usable, but the full bootstrap gate remains open on
+items 3, 5, and 6. This is intentionally narrower than Gate 2 in the system roadmap.
 
 ## Revisit triggers
 

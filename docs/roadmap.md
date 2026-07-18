@@ -1,6 +1,6 @@
 # Gumi roadmap
 
-Status: working execution roadmap, 2026-07-18. M1 is the first complete product milestone, not a reduced
+Status: working execution roadmap, 2026-07-19. M1 is the first complete product milestone, not a reduced
 demo milestone.
 
 ## M1 outcome
@@ -21,15 +21,15 @@ roadmap governs order, proof, and workstream convergence.
 
 | Area | Current evidence | State | Next proof |
 | --- | --- | --- | --- |
-| Repository boundary | `devices / edge / cloud` ownership and dependency law specified | Ready | Enforce it in the first executable workspace |
-| Omi hardware | Source, BOM, board, firmware, GATT, storage, and release audit | Source-proven | Read the exact owned unit over Android |
-| Firmware build | Stock v3.0.20 application payload reproduced | Build-proven | App-image-only stock recovery and visible canary on the unit |
+| Repository boundary | `devices / edge / cloud` ownership and dependency law specified | Enforced for landed Kotlin modules | Extend checks as platform/cloud modules land |
+| Omi hardware | Owned unit identified as stock v3.0.12/hardware 5.0; advertisement and 11-service/21-characteristic GATT profile captured | Connected read-only proven | Run the prepared image-state handoff, then behavior/power baselines |
+| Firmware build | Official installed v3.0.12 images verified; stock v3.0.20 application payload reproduced | Artifact/build-proven | Match installed hashes, then app-image-only stock recovery and visible canary |
 | Network-core safety | Clean-build NSIB key mismatch identified | Known constraint | Prove image `1` remains byte/hash unchanged during every canary |
-| Android lifecycle | Current Omi implementation and current Android guidance audited | Direction selected | Build the Gumi diagnostic shell and exercise process/background cases |
-| Edge runtime | Boundaries specified, no executable package yet | Ready to bootstrap | Same deterministic core tests on Android and Linux/JVM |
+| Android lifecycle | Compose shell, platform-neutral BLE/firmware ports, Nordic BLE 2.11.0 and Device Manager 2.8.0 adapters; GATT exercised physically and image-state mapped/tested offline | GATT physical / firmware offline proven | Execute image-state read, then add connected-device service, lifecycle/reconnect tests, and audio transport |
+| Edge runtime | KMP SDK/runtime, registry, Omi driver, Android host tests, and Linux witness compile | Bootstrap-proven | Add transport port/adapters, simulator, capture state machine, and durable spool |
 | Cloud data plane | M1 invariants specified, provider/runtime unselected | Design pending | Contract plus local ingest/object-manifest vertical |
 | Astrale semantics | Initial vocabulary and authority rules specified | Design pending | Method-ownership and authorization table, then simulation/live proof |
-| Physical acceptance | No writes or device changes performed | Blocked on owned unit session | Complete the read-only Android handoff |
+| Physical acceptance | Advertisement plus GATT discovery/allowlisted reads captured; image-state operation disclosed and independently guarded but not yet run | Gate 0 partial | Owner-tapped MCU image state, then gesture/reconnect/audio/power observations |
 
 ## Execution rules
 
@@ -237,30 +237,41 @@ Exit artifact: signed/versioned release evidence for the complete M1 path.
 
 Work that should proceed now, in dependency order:
 
-1. Complete the owned-unit read-only probe and record Gate 0 evidence.
-2. Establish the baseline commit before importing upstream history.
-3. Import the pinned Omi firmware subtree at `devices/omi-cv1/firmware` and reproduce the application
+1. **Done:** bootstrap the Kotlin-first edge workspace, enforce dependency and firmware-mutation
+   boundaries, and prove Android/JVM builds.
+2. **Prepared, awaiting phone:** run the deterministic
+   [image-state handoff](development/omi-image-state-handoff.md), compare both active hashes with the
+   official v3.0.12 oracle, and stop on transitional/mismatch/incomplete state.
+3. Complete the remaining Gate 0 gesture, indication, reconnect, audio, storage, and power observations
+   before any OTA action.
+4. Establish the baseline commit before importing upstream history.
+5. Import the pinned Omi firmware subtree at `devices/omi-cv1/firmware` and reproduce the application
    build through a repository-owned command.
-4. Bootstrap the Kotlin-first edge workspace and enforce the dependency boundaries.
-5. Implement the Omi protocol/simulator module from existing golden fixtures before connecting real BLE.
-6. Build an Android diagnostic shell that can associate, inspect, connect, and stream read-only data.
-7. Wrap Nordic Device Manager behind the updater port and execute Gate 1 with explicit user checkpoints.
-8. Specify the provider-owned media-ingest API and immutable manifest concurrently with local edge work.
-9. Model Astrale method ownership and authorization before installing any live semantic app.
+6. **In progress:** the portable Omi ring codec passes all 14 golden cases; build the deterministic
+   GATT/device simulator from the observed v3.0.12 and expected v3.0.20 profiles.
+7. **In progress:** the Android Compose diagnostic shell is installed on the owned phone and the
+   read-only scanner and Nordic GATT inspector succeeded on the owned pendant; add the connected-device
+   lifecycle service and read-only audio streaming.
+8. After Gate 0 and a separate design review, build the separately guarded image-`0` updater; do not
+   reuse or widen the inspection port.
+9. Specify the provider-owned media-ingest API and immutable manifest concurrently with local edge work.
+10. Model Astrale method ownership and authorization before installing any live semantic app.
 
-Steps 3–6 and 8–9 can advance while the physical probe is waiting; Gate 1 cannot.
+Steps 4–7 and 9–10 can advance while the physical probe is waiting; Gate 1 cannot.
 
-Environment note, 2026-07-18: the current workspace host has no detected JDK, Gradle, Android SDK,
-`adb`, or Android Studio installation. The edge bootstrap therefore begins by installing a pinned JDK
-17/Android toolchain and generating a verified Gradle wrapper; an uncompiled scaffold does not count as
-the Gate 2 witness.
+Environment note, 2026-07-19: the host originally had no JDK, Gradle, Android SDK, `adb`, or Android
+Studio. A checksum-verified workspace-local JDK 17/Android toolchain and Gradle wrapper are now installed;
+the exact pins and handset handoff are recorded in [the bootstrap runbook](development/bootstrap.md).
+This closes the build bootstrap risk, not Gate 2's BLE, spool, restart, and physical-device evidence.
 
 ## Decision schedule
 
 | Decision | Must be made before | Evidence required |
 | --- | --- | --- |
-| Exact Android/Kotlin/Gradle pins | Edge workspace bootstrap | Android + Linux/JVM compile/test spike |
+| Exact Android/Kotlin/Gradle pins (resolved for current bootstrap) | Re-open only on measured incompatibility | Android + Linux/JVM compile/test gate remains green |
 | Metadata database and spool encryption | First durable local audio | Crash recovery, key rotation, packaging/license spike |
+| Existing stock-media disposition | First ring-content read | Explicit owner choice, consent scope, import/delete recovery semantics |
+| Capture/participant consent policy | First real recording outside a controlled test | Applicable product/legal policy, physical indication, revocation/stop behavior |
 | Idle AAD policy and retention defaults | Custom capture firmware | Battery/privacy/product measurements |
 | Emergency physical reset/power gesture | Hold-to-talk firmware | Gesture reliability and recovery analysis |
 | Object store and upload transport | Gate 4 implementation | Region, cost, resumability, integrity, operations comparison |
@@ -282,6 +293,7 @@ device and edge ownership is not delayed by them.
 | Spool acknowledges before durability | Single durable-copy invariant and crash/fault injection around every acknowledgement boundary |
 | Cloud/Astrale authority leaks into byte plane | Narrow ingest credentials and app-owned authorization; no general graph token at ingest |
 | Always-on capture violates user expectation | Hardware-state-derived indication, Idle measurement, explicit capture commands, auditable policy |
+| Existing stock ring contains sensitive media | Quarantine it; no read, transcription, upload, advance, or clear before an explicit owner workflow |
 | Provider lock-in or silent model drift | Integration ports, evaluation corpus, provider/model/version provenance, replayable jobs |
 
 ## Beyond M1

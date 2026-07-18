@@ -13,7 +13,13 @@ will eventually decode each MCUboot image itself and compare:
 - nested NSIB validation metadata for the nRF5340 network image; and
 - the complete compatibility-signature verification result.
 
-The stock observation in [stock-v3.0.20.json](stock-v3.0.20.json) is a recovery oracle. It is not a
-Gumi release manifest and the public upstream key is not a Gumi trust authority. The published network
-image's embedded NSIB public-key fingerprint is also an oracle: a clean upstream build generates a
-different key and must not be treated as sealed-device-compatible.
+The observations serve two distinct compatibility decisions:
+
+- [stock-v3.0.12.json](stock-v3.0.12.json) is the installed-release oracle for the owned pendant. Its
+  MCUboot TLV digests are the hashes expected from the pending semantic image-state read.
+- [stock-v3.0.20.json](stock-v3.0.20.json) is the qualified baseline-candidate and stock-recovery
+  oracle. Migration from the installed release is not yet proven.
+
+Neither file is a Gumi release manifest, and the public upstream key is not a Gumi trust authority.
+Each published network image's embedded NSIB public-key fingerprint is also release-specific evidence:
+a clean upstream build generates a different key and must not be treated as sealed-device-compatible.

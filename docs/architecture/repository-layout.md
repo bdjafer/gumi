@@ -1,7 +1,8 @@
 # Repository and dependency layout
 
-Status: proposed M1 monorepo boundary. Directory names become real only when their first executable
-artifact lands.
+Status: governing M1 monorepo boundary. Directory names become real only when their first executable
+artifact lands; `edge/sdk`, `edge/runtime`, `edge/platforms/android`, the Omi edge driver, and
+Android/Linux shell roots now do.
 
 Gumi has three product substrates: physical devices, the local edge, and the cloud. Those boundaries
 remain stable when a phone becomes a Raspberry Pi, Omi becomes a different sensor or actuator, or a
@@ -163,7 +164,10 @@ edge/runtime ──calls through a port─────────────�
 - Astrale-backed apps store semantic state and opaque media references, never BLE packet state or raw
   audio chunks.
 
-These rules become executable package/import checks once implementation languages and workspaces land.
+For the landed Kotlin modules these rules are enforced by `./gumiw verifyArchitecture`. The check has a
+negative probe: an intentionally introduced Omi import in `edge/runtime` is rejected. Extend the rule
+set whenever a new platform, cloud, or device module lands; compilation boundaries alone do not detect
+every architectural leak.
 
 ## Test ownership
 

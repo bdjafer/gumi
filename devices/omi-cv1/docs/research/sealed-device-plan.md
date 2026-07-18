@@ -22,6 +22,10 @@ have no protected TLV/security counter, and share the same exposed upstream RSA 
 bootloader configuration nevertheless enables software downgrade prevention. See
 [stock-ota-inspection.md](stock-ota-inspection.md).
 
+The official v3.0.12 package matching the owned unit has also been decoded and verified. Its two
+published MCUboot TLV hashes form the exact oracle for the pending semantic image-state read; no claim
+is made about the installed bytes until the device returns matching hashes.
+
 The exact release build has also been reproduced. Its application payload matches the published image
 exactly, but its clean network build embeds a newly generated NSIB public key rather than the published
 network key. The first canary is therefore application-core-only; no locally generated network image or
@@ -31,6 +35,7 @@ Sources:
 
 - [official flash documentation](https://github.com/BasedHardware/omi/blob/1c19526cacb8a6100e8060b203c02963882281cf/docs/doc/get_started/Flash_device.mdx)
 - [upstream build and OTA guide](https://github.com/BasedHardware/omi/blob/1c19526cacb8a6100e8060b203c02963882281cf/omi/firmware/BUILD_AND_OTA_FLASH.md)
+- [owned-unit release oracle: Omi CV1 v3.0.12](https://github.com/BasedHardware/omi/releases/tag/Omi_CV1_v3.0.12)
 - [Omi CV1 v3.0.20 release](https://github.com/BasedHardware/omi/releases/tag/Omi_CV1_v3.0.20)
 - [Omi app MCU Manager implementation](https://github.com/BasedHardware/omi/blob/1c19526cacb8a6100e8060b203c02963882281cf/app/lib/pages/home/firmware_mixin.dart)
 
@@ -50,9 +55,11 @@ Sources:
 
 ## Stage 0: read-only device inventory
 
-Follow the exact [Android read-only probe](android-read-only-probe.md) with Nordic nRF Connect for
-Mobile and nRF Connect Device Manager. The stock Omi app may be used as an observation oracle but is
-not required by the future Gumi edge shell.
+Follow the exact [Android read-only probe](android-read-only-probe.md) with Gumi. Nordic nRF Connect for
+Mobile and nRF Connect Device Manager remain optional independent comparison tools, not prerequisites.
+The reconnect/install/capture sequence is automated by the
+[image-state handoff](../../../../docs/development/omi-image-state-handoff.md), except for the deliberately
+manual owner tap that approves the disclosed semantic read.
 
 Collect and save:
 
@@ -135,7 +142,7 @@ Upload the application image using a qualified Android MCU Manager adapter that 
 write image `1`. If a stock client insists on processing both images, stop and implement the narrow
 app-only updater rather than passing it a locally generated network image.
 
-Nordic Android Device Manager `3.3.1` already exposes separate APIs for a single image and an explicit
+Nordic Android Device Manager `2.8.0` exposes separate APIs for a single image and an explicit
 multi-image `ImageSet`, so this boundary can reuse the maintained transport/state machine rather than
 forking MCU Manager. Gumi's adapter will call only the single-image path for the canary and verify image
 `1` before and after.

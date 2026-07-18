@@ -22,8 +22,11 @@ M1 is not a file-upload demo and not a thin reskin of the Omi application.
 
 ## Current phase
 
-The repository is intentionally specification-first while we establish hardware truth, ownership
-boundaries, and a reuse plan:
+The repository now combines the governing specifications with its first executable edge spine. The
+portable SDK/runtime and Omi driver compile and test on Android and JVM, the checked ring fixtures run
+against the Kotlin codec, a Linux witness executes, and the Android shell has discovered and completed
+a read-only GATT inventory of the owned Omi. Streaming, durable capture, firmware mutation, cloud, and
+live Astrale gates remain explicitly open:
 
 - [Omi CV1 capability audit](devices/omi-cv1/docs/research/capability-audit.md)
 - [Omi CV1 component and wiring map](devices/omi-cv1/docs/research/component-map.md)
@@ -38,11 +41,13 @@ boundaries, and a reuse plan:
 - [Repository and dependency layout](docs/architecture/repository-layout.md)
 - [Edge runtime and plugin contract](docs/specs/edge-runtime-contract.md)
 - [Android-first edge technology decision](docs/decisions/0001-android-edge-stack.md)
+- [Verified edge development bootstrap](docs/development/bootstrap.md)
 - [Reuse ledger](docs/reuse-ledger.md)
 - [Omi upstream policy](devices/omi-cv1/UPSTREAM.md)
 - [OTA protocol evidence](devices/omi-cv1/protocols/ota/v1/README.md)
 - [Offline ring protocol fixtures](devices/omi-cv1/protocols/ring/v1/README.md)
 - [Source-declared GATT profile](devices/omi-cv1/protocols/gatt/v3.0.20/README.md)
+- [Owned-unit v3.0.12 GATT profile](devices/omi-cv1/protocols/gatt/v3.0.12/README.md)
 
 ## Governing principles
 

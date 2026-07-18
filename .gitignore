@@ -7,6 +7,9 @@
 .idea/
 .vscode/
 *.swp
+.gradle/
+local.properties
+*.iml
 
 # Firmware toolchains and build output
 devices/omi-cv1/firmware/v2.9.0/
