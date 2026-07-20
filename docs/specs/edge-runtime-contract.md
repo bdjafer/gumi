@@ -1,7 +1,8 @@
 # Edge runtime and plugin contract
 
-Status: design contract for the first executable edge workspace. API names are provisional; ownership,
-dependency direction, and invariants are governing.
+Status: governing design contract with locally executable portable, Android-storage/service, and
+media-ingest chunk-adapter candidates. API names remain provisional; no local candidate implies handset,
+production, or end-to-end qualification.
 
 ## Purpose
 
@@ -156,11 +157,76 @@ callbacks may arrive concurrently, but they become ordered inputs before changin
 media I/O runs outside the mailbox and returns a correlated completion; it cannot block unrelated link
 or safety events.
 
+Physical capture effects use one causal lane per supervisor. Every device observation, mode acquire,
+and emergency release receives a monotonically increasing causal generation tied to a connection
+session generation. A fatal event cancels an older acquire and waits for that call to physically settle
+before invoking release; the hardware port's cancellation contract forbids detached work from acquiring
+a mode after cancellation has returned. Only an explicit device observation, a correlated mode acquire,
+or an emergency release whose proof is later than every prior acquire can establish acquired truth.
+Process boot therefore starts `Unverified`, never assumed `Idle`.
+
 Every command carries a stable command ID, caller context, deadline, and cancellation policy. Retrying a
 command either returns the prior terminal result or reconciles actual device state; it must not blindly
 repeat a destructive effect.
 
+The locally executable fleet/process boundary now keeps those owners distinct:
+
+- `OperationalRuntimeRegistry` maps a provisioned `DeviceId` to one heterogeneous per-device runtime,
+  starts them under one host operation in stable identity order, cleans attempted owners in reverse,
+  and routes device-scoped power commands without a fleet-wide command lock;
+- `ProcessGlobalOperationalStorageOwner` opens the Android host spool once, lends logical device
+  lifetimes without letting any device close the physical store, and closes it only after registry
+  cleanup; and
+- the Android operational graph composes that registry and storage owner behind one `RuntimeHost` and
+  one foreground bridge. It creates no automatic start source and imports no concrete device driver.
+
+Recovered backlog carries an explicit `DEVICE`, `EDGE_HOST`, or `UNAVAILABLE` scope. The operational
+shell forwards counts only for `DEVICE`; host-global counts remain in the process storage projection and
+are never presented as per-device sync truth.
+
+The executable capture reducer keeps a bounded, insertion-ordered terminal replay ledger (256 records
+by default, oldest terminal first). This is an explicit process-local idempotency window, not durable
+deduplication. A host that promises replay across app/process death must persist terminal results and
+reconcile physical state outside the reducer.
+
 ## Durable media protocol
+
+Current executable boundary: `edge/runtime/.../spool` implements the portable metadata transaction and
+recovery state machine. It uses stable UUIDv7 capture/stream/chunk identities, inclusive unsigned
+64-bit ranges, exact content/descriptor digest bindings, sparse arrival with a contiguous durable
+source checkpoint, explicit source-discontinuity evidence, monotonic cloud snapshot revisions, and
+bounded quota pressure. Finalization becomes ready only after a declared terminal range is completely
+covered and every participating chunk has an exact durable cloud acknowledgement. The common-test
+in-memory store is a deterministic crash fake only.
+
+`edge/platforms/android/.../spool` now implements the two storage ports as a separate local candidate:
+Keystore AES-GCM/HMAC keys, one encrypted strict snapshot in SQLite WAL, immutable encrypted no-backup
+payload files, process/OS exclusive opening, and startup-only reconciliation. Its JVM fault suite passes,
+and the original five instrumentation cases execute real Keystore/SQLite/filesystem primitives on an
+API 36 ARM64 emulator. Two newer operational/cancellation cases compile but have not run on Android.
+The adapter is not composed into the operational shell; Motorola/OEM storage,
+forced-death/reboot/migration/rotation remain qualification gates.
+
+`edge/runtime/.../ingest` now supplies the provider-neutral publisher port and portable one-step upload
+owner. It binds a capture to one ingest session, selects locally durable/unacknowledged chunks by stable
+stream/range/chunk order, verifies the opaque payload through the durable-store port, and persists the
+exact canonical-descriptor-digest attempt fence before making at most one external call. A normalized
+durable ACK must repeat that exact digest plus the local chunk identity, content digest, and range before
+the fence is replaced by cloud-durable truth. A definitive rejection or outcome-unknown remains fenced
+across restart and cannot be selected again without explicit retry authorization. Authorization does
+not erase the old binding: it marks that exact ingest/chunk/descriptor identity eligible for one new
+attempt, and a changed adapter digest is rejected before bytes leave the edge. Even an adapter result
+that proves no external attempt occurred retains the exact binding while making it eligible again.
+`edge/adapters/cloud/media-ingest` now supplies the local Android/JVM chunk HTTP candidate. It
+independently maps the publisher's canonical descriptor, rejects more than 1 MiB before authorization
+or network, validates one exact payload copy, obtains one capture-scoped bearer/correlation identity,
+and makes at most one PUT through a dedicated OkHttp client with no inherited interceptors,
+authenticators, cookies, cache, redirects, or transparent connection retry. It accepts durability only
+from a bounded `application/json` ACK with canonical unsigned-64 strings and exact identity, digest,
+range, partition, disposition, request, and correlation matches. Numeric ACK fields, wrong content type,
+malformed/oversized bodies, or ambiguous transport become non-durable outcomes; typed problems are
+trusted only from bounded `application/problem+json`. This remains local adapter evidence, not Android
+composition or real cloud durability.
 
 The local durability boundary is explicit:
 
@@ -206,8 +272,10 @@ The runtime publishes ports for effects that vary by host:
 - structured telemetry export.
 
 Android implements these with platform facilities such as Keystore, companion association, foreground
-services, and app-private storage. Linux implements the same semantics through its own adapters. A port
-must describe the guarantee Gumi needs, not merely rename an Android class.
+services, and app-private storage. The encrypted-spool and foreground-service candidates exist locally;
+the Companion adapter, durable restart/device binding, and their product composition do not. Linux
+implements the same semantics through its own future adapters. A port must describe the guarantee Gumi
+needs, not merely rename an Android class.
 
 ## Cloud ports
 
@@ -225,6 +293,15 @@ Provider OpenAPI/realtime definitions remain canonical under the publishing clou
 generated clients and wire errors into runtime port types. The runtime never imports a cloud SDK or
 assumes that an accepted HTTP request is a durable media acknowledgement.
 
+The executable media-ingest port deliberately contains no URL, credential, HTTP header, generated DTO,
+or provider response type. Its preparation step is a pure mapping that supplies the publisher's canonical
+descriptor digest; the adapter must send that same mapping and normalize only a durability-proving
+response. Ambiguous transport outcomes are values, not retry instructions.
+
+The landed OkHttp module implements only chunk upload. Status reconciliation, credential delivery and
+renewal, session finalization, manifest handoff, production TLS/identity policy, and wiring to the
+Android service remain separate ports or composition work.
+
 ## Shell application boundary
 
 `edge/shell/application` exposes a host-neutral control surface. Initial use cases include:
@@ -241,9 +318,29 @@ The shell consumes immutable projections and terminal/progress results. It does 
 objects, parse Omi packets, own retry counters, write spool checkpoints, mint upload credentials, or
 mutate Astrale state directly.
 
+The executable [portable control-plane product contract](portable-control-plane-contract.md) now layers
+deterministic fleet focus, a one-active-capture workflow, attachment/fault/accessibility presentation,
+and an optional current-session physical-output truth port over that surface. Missing output telemetry
+remains unverified; a device-specific requested LED pattern is never accepted as observed output truth.
+Android and Linux remain rendering/composition adapters, and every enabled command is still revalidated
+by the concrete runtime and device owner.
+
+Caller-supplied `FRESH` is only a hint. The portable projector recomputes effective freshness from the
+observation timestamp and a bounded age policy, rejects future timestamps, and requires capture proof,
+capture observation, and ready-link observation to name the same connection-session generation before
+it can render `VERIFIED_OFF`. Expired, mixed-generation, unverified, disconnected, edge-inferred, or
+cloud-reported Idle facts remain unknown/may-be-active.
+
 On Android the UI may call this surface in-process while the connected-device service keeps the runtime
 host alive. On a Raspberry Pi the same surface may be exposed over a local authenticated RPC/Unix socket.
 Transporting the shell API does not change its semantics.
+
+Current local truth: `DefaultShellApplication` and its fail-safe control presentation execute on JVM
+and Android host tests, and the Linux witness opens the negotiated Omi driver through the simulator.
+The Android Activity exposes direct `RuntimeHost` start/stop/retry projections plus separate diagnostics,
+but it does not yet compose `DefaultShellApplication`, a real operational Omi session, encrypted
+recovery, or the media-ingest adapter. Android therefore remains a service/composition scaffold, not
+the portable product shell.
 
 ## Omi CV1 driver boundary
 
@@ -255,6 +352,20 @@ Transporting the shell API does not change its semantics.
 - device-side challenge/session protocol and Omi-specific provisioning evidence;
 - Omi firmware compatibility/version policy; and
 - Omi protocol simulator behavior and golden-fixture conformance.
+
+Stock Omi BLE notifications first pass through the device driver's versioned envelope decoder. The
+stock three-byte `u16le notification sequence + u8 fragment index` is transport framing, not part of
+Opus. The driver requires codec ID `21`, proves the negotiated ATT MTU can carry the firmware's
+160-byte maximum unfragmented packet, strips that envelope, expands the wrapping source sequence, and
+rejects a non-zero fragment index. Only the resulting complete codec payload is negotiated as
+`RAW_OPUS_PACKET`. It is not an
+`ogg-opus-page-fragment-v1` body and must not be sent to the media-ingest API or persisted under that
+payload-format label. The sequence-aware runtime muxer adds `OpusHead`/`OpusTags`, complete Ogg pages,
+granule positions, page sequence/serial values, CRCs, and EOS before the spool can produce upload-ready
+fragments. Its deterministic Kotlin output is byte-compared with a checked-in fixture that the ingest
+application parses independently. Physical-device TOC, pre-skip, playback, and measured-overhead
+qualification remain explicit promotion gates. The muxer belongs in neither the Omi driver nor the
+Android BLE adapter.
 
 It must not own:
 
@@ -284,18 +395,29 @@ stable public Bluetooth addresses, or full provider payloads.
 
 ## Conformance strategy
 
-The first workspace supplies:
+The first workspace supplies or plans the following evidence owners:
 
 - SDK contract tests reusable by every device driver and platform adapter;
 - fake clock, random, secure-store, metadata, blob, BLE, and cloud ports;
 - deterministic scheduler/process-restart fixtures for runtime state machines;
 - Omi golden GATT/ring fixtures and corrupted/truncated variants;
 - an Omi simulator capable of disconnect, reorder, duplicate, overwrite, disk-full, and reboot cases;
-- Android instrumentation tests for service/process/permission/association behavior; and
+- local service/process/notification tests, 3/3 Android Intent/framework cases, and the original five
+  encrypted-storage cases on an API 36 ARM64 emulator; two newer storage cases plus full
+  permission/association/process/OEM instrumentation
+  remain planned; and
 - a Linux/JVM executable running the same simulated capture and restart scenario.
 
 Hardware-in-loop tests remain under `devices/omi-cv1/tests/hardware-in-loop`. Simulator and contract
 tests make failures reproducible; they do not close physical gates.
+
+The portable media witness currently covers deterministic Ogg Opus mux output -> durable spool payload
+and metadata -> provider-neutral fake ingest -> exact normalized ACK -> finalization readiness. It also
+forces outcome-unknown, rejection, payload-read failure, restart, explicit retry release, and concurrent
+scheduler calls. The Android encrypted-store candidate and real OkHttp chunk adapter now pass their own
+local suites, and storage/Intent instrumentation runs on an API 36 emulator. Device simulator/driver
+delivery into the mux/spool owner, Android product composition, owned-handset storage/service execution,
+and deployed ingest durability remain separate integration gates.
 
 ## First executable witness
 
@@ -310,5 +432,7 @@ Before UI design or cloud provider integration, the first vertical must:
 7. resume from the exact durable checkpoint without duplication; and
 8. expose the resulting device/capture/backlog projection through the shell application surface.
 
-The same scenario runs on Android and Linux/JVM. The real Omi replaces the simulator only after the
-read-only physical gate permits it.
+The complete scenario must run on Android and Linux/JVM. Today the Linux witness opens the real driver
+against the simulator and renders portable control-plane state, while the portable spool/upload witness
+runs separately. The Android shell has not composed that full graph. The real Omi replaces the simulator
+only after the read-only physical gate permits it.

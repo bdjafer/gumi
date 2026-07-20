@@ -1,0 +1,16 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+
+# npm updates are intentionally absent: the only lock-backed JavaScript
+# workspace uses pnpm 11, which Dependabot did not support when this file was
+# added (2026-07-19).

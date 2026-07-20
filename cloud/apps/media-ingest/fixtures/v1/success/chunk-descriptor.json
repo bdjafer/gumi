@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "gumi.media-ingest.chunk.v1",
+  "ingestSessionId": "0190c6f0-7b21-7a40-8b11-000000000002",
+  "streamId": "0190c6f0-7b21-7a40-8b11-000000000006",
+  "chunkId": "0190c6f0-7b21-7a40-8b11-000000000007",
+  "sequenceRange": { "first": "0", "last": "1" },
+  "payloadBytes": "168",
+  "payloadFormat": "ogg-opus-page-fragment-v1",
+  "contentDigest": "sha256:d857c547c6ffb1d8f9963a2c6ead0420501a3519b5b6f8acf51434e479adcb83",
+  "codecConfigurationId": "opus-16000-mono-20ms-v1",
+  "sourceStartedAt": "2026-07-19T20:00:01Z",
+  "edgeReceivedAt": "2026-07-19T20:00:01.125Z",
+  "sourceRetransmission": false
+}

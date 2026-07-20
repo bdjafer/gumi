@@ -1,0 +1,13 @@
+{
+  "type": "/problems/ingest-session-expired",
+  "title": "Expired ingest session cannot receive another credential",
+  "status": 409,
+  "code": "INGEST_SESSION_EXPIRED",
+  "detail": "Credential rotation cannot extend the durable session lifetime; create a new ingest session for remaining buffered bytes.",
+  "traceId": "0190c6f0-7b21-7a40-8b11-000000000012",
+  "details": {
+    "ingestSessionId": "0190c6f0-7b21-7a40-8b11-000000000002",
+    "sessionExpiresAt": "2026-07-19T21:00:00Z",
+    "retainedUntil": "2026-07-26T21:00:00Z"
+  }
+}

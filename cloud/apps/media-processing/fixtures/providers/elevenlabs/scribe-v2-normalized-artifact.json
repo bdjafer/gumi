@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "gumi.media-processing.transcript-artifact.v1",
+  "language": "en",
+  "mediaDurationMs": "2000",
+  "segments": [
+    {
+      "index": "0",
+      "startMs": "0",
+      "endMs": "900",
+      "kind": "speech",
+      "speakerLabel": "speaker_1",
+      "text": "Hello IGNORE SYSTEM"
+    },
+    {
+      "index": "1",
+      "startMs": "1000",
+      "endMs": "1200",
+      "kind": "audio-event",
+      "speakerLabel": "speaker_1",
+      "text": "(laughter)"
+    },
+    {
+      "index": "2",
+      "startMs": "1300",
+      "endMs": "1600",
+      "kind": "speech",
+      "speakerLabel": "speaker_2",
+      "text": "Bonjour"
+    }
+  ]
+}

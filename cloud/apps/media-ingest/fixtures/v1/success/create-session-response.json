@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "gumi.media-ingest.session.v1",
+  "requestId": "0190c6f0-7b21-7a40-8b11-000000000001",
+  "ingestSessionId": "0190c6f0-7b21-7a40-8b11-000000000002",
+  "captureSessionId": "0190c6f0-7b21-7a40-8b11-000000000003",
+  "deviceId": "0190c6f0-7b21-7a40-8b11-000000000004",
+  "edgeHostId": "0190c6f0-7b21-7a40-8b11-000000000005",
+  "primaryStreamId": "0190c6f0-7b21-7a40-8b11-000000000006",
+  "state": "open",
+  "sessionExpiresAt": "2026-07-19T21:00:00Z",
+  "retainedUntil": "2026-07-26T21:00:00Z",
+  "credential": {
+    "tokenType": "Bearer",
+    "accessToken": "fixture-only-not-a-real-ingest-token-0001",
+    "issuedAt": "2026-07-19T20:00:00Z",
+    "expiresAt": "2026-07-19T20:15:00Z"
+  },
+  "streams": [
+    {
+      "streamId": "0190c6f0-7b21-7a40-8b11-000000000006",
+      "kind": "audio",
+      "sequencePolicy": { "first": "0", "maximumLast": "999999" },
+      "maxChunkBytes": "65536",
+      "maxTotalBytes": "104857600",
+      "codec": {
+        "name": "opus",
+        "configurationId": "opus-16000-mono-20ms-v1",
+        "sampleRateHz": 16000,
+        "channelCount": 1,
+        "frameDurationUs": 20000
+      },
+      "oggLayout": {
+        "profile": "gumi.ogg-opus.single-packet-page.v1",
+        "serialNumber": "3548421033",
+        "preSkip48kSamples": "312"
+      }
+    }
+  ]
+}

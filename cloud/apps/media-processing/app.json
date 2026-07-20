@@ -1,0 +1,38 @@
+{
+  "$schema": "../../catalog/application-manifest.schema.json",
+  "schemaVersion": 1,
+  "appId": "media-processing",
+  "kind": "http-service",
+  "owner": "gumi-derived-media",
+  "summary": "Owns digest-bound processing jobs, leased attempts, immutable derived artifacts, and provider provenance.",
+  "durableAuthority": [
+    "Processing request, job, attempt, lease, callback receipt, and terminal result truth",
+    "Immutable derived artifact staging, commit, provenance, and bounded content projection"
+  ],
+  "dataClasses": ["derived-content", "operational-metadata"],
+  "tenancy": {
+    "mode": "dedicated-deployment",
+    "sharedDeployment": false,
+    "scopeSource": "deployment-binding"
+  },
+  "contracts": [
+    {
+      "id": "media-processing-v1",
+      "protocol": "http-openapi",
+      "version": "v1",
+      "path": "api/v1/openapi.json"
+    }
+  ],
+  "dependencies": [],
+  "deployment": {
+    "status": "local-only",
+    "target": null,
+    "regions": []
+  },
+  "retention": {
+    "status": "unselected",
+    "class": "sensitive-user-content",
+    "policyId": null
+  },
+  "runbook": "README.md"
+}

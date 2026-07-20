@@ -1,0 +1,4 @@
+node_modules/
+
+# Vite build output goes to ../.dist (gitignored at the domain root)
+dist/

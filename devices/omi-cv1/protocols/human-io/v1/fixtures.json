@@ -1,0 +1,707 @@
+{
+  "schema": "gumi.device-human-io-fixtures/v1",
+  "protocol": "gumi.omi-cv1-human-io/v1",
+  "contract": "contract.json",
+  "status": "proposed_unqualified",
+  "time_unit": "monotonic_millisecond",
+  "conventions": {
+    "default_input_layer": "accepted_debounced_logical_edges",
+    "raw_level_change_cases_name_the_input_layer_explicitly": true,
+    "same_timestamp_precedence": [
+      "accepted_button_edges",
+      "gesture_deadlines"
+    ],
+    "semantic_event_traces_are_exhaustive_per_consumer_owner": true,
+    "effect_completions_are_explicit_inputs": true,
+    "absence_in_forbidden_applies_to_entire_case": true,
+    "terminal_verified_idle_requires_fresh_device_evidence": true
+  },
+  "cases": [
+    {
+      "id": "debounce-collapses-switch-bounce",
+      "operation": "debounce",
+      "input_layer": "raw_level_changes",
+      "initial_level": "released",
+      "inputs": [
+        { "at_ms": 0, "type": "raw_button_level", "value": "pressed" },
+        { "at_ms": 10, "type": "raw_button_level", "value": "released" },
+        { "at_ms": 18, "type": "raw_button_level", "value": "pressed" },
+        { "at_ms": 100, "type": "raw_button_level", "value": "released" }
+      ],
+      "expected": {
+        "accepted_edges": [
+          { "at_ms": 48, "type": "button_down" },
+          { "at_ms": 130, "type": "button_up" }
+        ],
+        "forbidden": [
+          "additional_button_down",
+          "additional_button_up"
+        ]
+      }
+    },
+    {
+      "id": "single-tap-repeats-status-without-capture",
+      "operation": "gesture",
+      "initial": {
+        "maintenance": "normal",
+        "mic_truth": "verified_off",
+        "base_recording": "inactive",
+        "link": "ready"
+      },
+      "inputs": [
+        { "at_ms": 0, "type": "button_down" },
+        { "at_ms": 100, "type": "button_up" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 450, "type": "single_tap" },
+          { "at_ms": 450, "type": "repeat_status" }
+        ],
+        "output_patterns": [
+          { "at_ms": 450, "indicator": "ready_link_status" }
+        ],
+        "terminal": {
+          "mic_truth": "verified_off",
+          "base_recording": "inactive"
+        },
+        "forbidden": [
+          "microphone_acquire_request",
+          "audio_frame",
+          "base_recording_started",
+          "voice_turn_started"
+        ]
+      }
+    },
+    {
+      "id": "double-tap-window-inclusive-at-350-ms",
+      "operation": "gesture",
+      "initial": {
+        "maintenance": "normal",
+        "mic_truth": "verified_off",
+        "base_recording": "inactive"
+      },
+      "inputs": [
+        { "at_ms": 0, "type": "button_down" },
+        { "at_ms": 100, "type": "button_up" },
+        { "at_ms": 450, "type": "button_down" },
+        { "at_ms": 550, "type": "button_up" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 550, "type": "double_tap" },
+          { "at_ms": 550, "type": "start_base_recording_requested" }
+        ],
+        "forbidden": [
+          "single_tap",
+          "hold_committed",
+          "voice_turn_started",
+          "audio_frame_before_capture_commitment"
+        ]
+      }
+    },
+    {
+      "id": "second-press-after-351-ms-does-not-retroactively-double",
+      "operation": "gesture",
+      "initial": {
+        "maintenance": "normal",
+        "mic_truth": "verified_off",
+        "base_recording": "inactive"
+      },
+      "inputs": [
+        { "at_ms": 0, "type": "button_down" },
+        { "at_ms": 100, "type": "button_up" },
+        { "at_ms": 451, "type": "button_down" },
+        { "at_ms": 551, "type": "button_up" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 450, "type": "single_tap" },
+          { "at_ms": 450, "type": "repeat_status" },
+          { "at_ms": 901, "type": "single_tap" },
+          { "at_ms": 901, "type": "repeat_status" }
+        ],
+        "terminal": {
+          "mic_truth": "verified_off",
+          "base_recording": "inactive"
+        },
+        "forbidden": [
+          "double_tap",
+          "microphone_acquire_request",
+          "audio_frame"
+        ]
+      }
+    },
+    {
+      "id": "release-at-exact-hold-deadline-wins",
+      "operation": "gesture",
+      "initial": {
+        "maintenance": "normal",
+        "mic_truth": "verified_off",
+        "base_recording": "inactive"
+      },
+      "inputs": [
+        { "at_ms": 0, "type": "button_down" },
+        { "at_ms": 500, "type": "button_up" },
+        { "at_ms": 500, "type": "hold_deadline" }
+      ],
+      "expected": {
+        "event_order_at_500_ms": [
+          "button_up",
+          "cancel_hold_deadline"
+        ],
+        "semantic_events": [
+          { "at_ms": 850, "type": "single_tap" },
+          { "at_ms": 850, "type": "repeat_status" }
+        ],
+        "terminal": {
+          "mic_truth": "verified_off",
+          "voice_turn": "inactive"
+        },
+        "forbidden": [
+          "hold_committed",
+          "microphone_acquire_request",
+          "voice_turn_started",
+          "audio_frame"
+        ]
+      }
+    },
+    {
+      "id": "hold-acquires-voice-turn-only-after-all-effects",
+      "operation": "gesture_capture_and_output",
+      "initial": {
+        "maintenance": "normal",
+        "mic_truth": "verified_off",
+        "base_recording": "inactive",
+        "voice_turn": "inactive",
+        "realtime_admission_lease": "valid"
+      },
+      "inputs": [
+        { "at_ms": 0, "type": "button_down" },
+        { "at_ms": 500, "type": "hold_deadline" },
+        { "at_ms": 501, "type": "privacy_guard_asserted" },
+        { "at_ms": 504, "type": "microphone_acquired" },
+        { "at_ms": 505, "type": "local_durability_ready" },
+        { "at_ms": 506, "type": "realtime_route_ready" },
+        { "at_ms": 900, "type": "button_up" },
+        { "at_ms": 910, "type": "microphone_released" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 500, "type": "hold_committed" },
+          { "at_ms": 500, "type": "start_voice_turn_requested" },
+          { "at_ms": 506, "type": "voice_turn_started" },
+          { "at_ms": 900, "type": "hold_released" },
+          { "at_ms": 900, "type": "end_voice_turn_requested" },
+          { "at_ms": 910, "type": "voice_turn_ended" }
+        ],
+        "output_patterns": [
+          { "from_ms": 501, "until_ms": 910, "indicator": "privacy_voice_turn" },
+          { "at_ms": 506, "haptic": "voice_ready" }
+        ],
+        "first_audio_frame": {
+          "at_or_after_ms": 506
+        },
+        "terminal": {
+          "mic_truth": "verified_off",
+          "base_recording": "inactive",
+          "voice_turn": "inactive"
+        },
+        "forbidden": [
+          "audio_frame_before_506_ms",
+          "privacy_guard_off_between_501_and_910_ms",
+          "base_recording_started"
+        ]
+      }
+    },
+    {
+      "id": "tap-then-held-second-press-becomes-hold-not-double",
+      "operation": "gesture",
+      "initial": {
+        "maintenance": "normal",
+        "mic_truth": "verified_off",
+        "base_recording": "inactive",
+        "realtime_admission_lease": "valid"
+      },
+      "inputs": [
+        { "at_ms": 0, "type": "button_down" },
+        { "at_ms": 100, "type": "button_up" },
+        { "at_ms": 300, "type": "button_down" },
+        { "at_ms": 800, "type": "hold_deadline" },
+        { "at_ms": 1000, "type": "button_up" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 800, "type": "hold_committed" },
+          { "at_ms": 800, "type": "start_voice_turn_requested" },
+          { "at_ms": 1000, "type": "hold_released" },
+          { "at_ms": 1000, "type": "end_voice_turn_requested" }
+        ],
+        "forbidden": [
+          "single_tap",
+          "double_tap",
+          "start_base_recording_requested"
+        ]
+      }
+    },
+    {
+      "id": "double-tap-starts-recording-after-hardware-commit",
+      "operation": "gesture_capture_and_output",
+      "initial": {
+        "maintenance": "normal",
+        "mic_truth": "verified_off",
+        "base_recording": "inactive",
+        "storage": "healthy"
+      },
+      "inputs": [
+        { "at_ms": 0, "type": "button_down" },
+        { "at_ms": 100, "type": "button_up" },
+        { "at_ms": 300, "type": "button_down" },
+        { "at_ms": 400, "type": "button_up" },
+        { "at_ms": 401, "type": "privacy_guard_asserted" },
+        { "at_ms": 405, "type": "microphone_acquired" },
+        { "at_ms": 406, "type": "local_durability_ready" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 400, "type": "double_tap" },
+          { "at_ms": 400, "type": "start_base_recording_requested" },
+          { "at_ms": 406, "type": "base_recording_started" }
+        ],
+        "output_patterns": [
+          { "from_ms": 401, "indicator": "privacy_recording" },
+          { "at_ms": 406, "haptic": "recording_started" }
+        ],
+        "first_audio_frame": {
+          "at_or_after_ms": 406
+        },
+        "terminal": {
+          "mic_truth": "acquired",
+          "base_recording": "active",
+          "voice_turn": "inactive"
+        },
+        "forbidden": [
+          "audio_frame_before_406_ms",
+          "voice_turn_started",
+          "privacy_guard_off_after_401_ms"
+        ]
+      }
+    },
+    {
+      "id": "double-tap-stops-recording-only-after-release",
+      "operation": "gesture_capture_and_output",
+      "initial": {
+        "maintenance": "normal",
+        "mic_truth": "acquired",
+        "base_recording": "active",
+        "indicator": "privacy_recording"
+      },
+      "inputs": [
+        { "at_ms": 0, "type": "button_down" },
+        { "at_ms": 80, "type": "button_up" },
+        { "at_ms": 250, "type": "button_down" },
+        { "at_ms": 330, "type": "button_up" },
+        { "at_ms": 340, "type": "local_recording_finalized" },
+        { "at_ms": 350, "type": "microphone_released" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 330, "type": "double_tap" },
+          { "at_ms": 330, "type": "stop_base_recording_requested" },
+          { "at_ms": 350, "type": "base_recording_stopped" }
+        ],
+        "output_patterns": [
+          { "until_ms": 350, "indicator": "privacy_recording" },
+          { "at_ms": 350, "indicator": "off" },
+          { "at_ms": 350, "haptic": "recording_stopped" }
+        ],
+        "terminal": {
+          "mic_truth": "verified_off",
+          "base_recording": "inactive"
+        },
+        "forbidden": [
+          "privacy_guard_off_before_350_ms",
+          "new_audio_frame_after_350_ms"
+        ]
+      }
+    },
+    {
+      "id": "voice-turn-over-recording-returns-to-same-recording",
+      "operation": "gesture_capture_and_output",
+      "initial": {
+        "maintenance": "normal",
+        "mic_truth": "acquired",
+        "base_recording": "active",
+        "base_recording_id": "recording-a",
+        "voice_turn": "inactive",
+        "realtime_admission_lease": "valid",
+        "indicator": "privacy_recording"
+      },
+      "inputs": [
+        { "at_ms": 0, "type": "button_down" },
+        { "at_ms": 500, "type": "hold_deadline" },
+        { "at_ms": 505, "type": "realtime_route_ready" },
+        { "at_ms": 900, "type": "button_up" },
+        { "at_ms": 910, "type": "realtime_route_closed" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 500, "type": "hold_committed" },
+          { "at_ms": 500, "type": "start_voice_turn_overlay_requested" },
+          { "at_ms": 505, "type": "voice_turn_started" },
+          { "at_ms": 900, "type": "hold_released" },
+          { "at_ms": 900, "type": "end_voice_turn_requested" },
+          { "at_ms": 910, "type": "voice_turn_ended" }
+        ],
+        "output_patterns": [
+          { "until_ms": 505, "indicator": "privacy_recording" },
+          { "from_ms": 505, "until_ms": 910, "indicator": "privacy_voice_turn" },
+          { "from_ms": 910, "indicator": "privacy_recording" },
+          { "at_ms": 505, "haptic": "voice_ready" }
+        ],
+        "terminal": {
+          "mic_truth": "acquired",
+          "base_recording": "active",
+          "base_recording_id": "recording-a",
+          "voice_turn": "inactive"
+        },
+        "forbidden": [
+          "microphone_release_request",
+          "base_recording_stopped",
+          "privacy_guard_off"
+        ]
+      }
+    },
+    {
+      "id": "voice-turn-without-admission-is-refused-mic-off",
+      "operation": "gesture_capture_and_output",
+      "initial": {
+        "maintenance": "normal",
+        "mic_truth": "verified_off",
+        "base_recording": "inactive",
+        "realtime_admission_lease": "absent"
+      },
+      "inputs": [
+        { "at_ms": 0, "type": "button_down" },
+        { "at_ms": 500, "type": "hold_deadline" },
+        { "at_ms": 700, "type": "button_up" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 500, "type": "hold_committed" },
+          { "at_ms": 500, "type": "voice_turn_refused", "reason": "realtime_admission_unavailable" }
+        ],
+        "output_patterns": [
+          { "at_ms": 500, "haptic": "refused" },
+          { "at_ms": 500, "indicator": "disconnected_status" }
+        ],
+        "terminal": {
+          "mic_truth": "verified_off",
+          "base_recording": "inactive",
+          "voice_turn": "inactive"
+        },
+        "forbidden": [
+          "privacy_guard_assert_request",
+          "microphone_acquire_request",
+          "audio_frame",
+          "voice_turn_started"
+        ]
+      }
+    },
+    {
+      "id": "link-loss-does-not-stop-active-recording",
+      "operation": "lifecycle_projection",
+      "initial": {
+        "mic_truth": "acquired",
+        "base_recording": "active",
+        "link": "ready",
+        "storage": "healthy",
+        "indicator": "privacy_recording"
+      },
+      "inputs": [
+        { "at_ms": 100, "type": "link_disconnected" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 100, "type": "link_state_changed", "value": "disconnected" }
+        ],
+        "shell": {
+          "capture": "may_still_be_recording",
+          "link": "disconnected"
+        },
+        "terminal": {
+          "mic_truth": "acquired",
+          "base_recording": "active",
+          "indicator": "privacy_recording"
+        },
+        "forbidden": [
+          "stop_base_recording_requested",
+          "privacy_guard_off",
+          "verified_idle_projection"
+        ]
+      }
+    },
+    {
+      "id": "disconnect-invalidates-verified-idle-projection",
+      "operation": "lifecycle_projection",
+      "initial": {
+        "mic_truth": "verified_off",
+        "base_recording": "inactive",
+        "link": "ready",
+        "shell_capture": "verified_idle"
+      },
+      "inputs": [
+        { "at_ms": 100, "type": "link_disconnected" }
+      ],
+      "expected": {
+        "semantic_events": [
+          {
+            "at_ms": 100,
+            "type": "link_state_changed",
+            "value": "disconnected"
+          }
+        ],
+        "shell": {
+          "capture": "unknown",
+          "label": "Microphone state unknown — check the device privacy light",
+          "link": "disconnected"
+        },
+        "forbidden": [
+          "verified_idle_projection_after_100_ms"
+        ]
+      }
+    },
+    {
+      "id": "maintenance-update-ignores-capture-gestures",
+      "operation": "gesture",
+      "initial": {
+        "maintenance": "updating",
+        "mic_truth": "verified_off",
+        "base_recording": "inactive",
+        "indicator": "updating"
+      },
+      "inputs": [
+        { "at_ms": 0, "type": "button_down" },
+        { "at_ms": 80, "type": "button_up" },
+        { "at_ms": 200, "type": "button_down" },
+        { "at_ms": 280, "type": "button_up" },
+        { "at_ms": 1000, "type": "button_down" },
+        { "at_ms": 1500, "type": "hold_deadline" },
+        { "at_ms": 1700, "type": "button_up" }
+      ],
+      "expected": {
+        "terminal": {
+          "maintenance": "updating",
+          "mic_truth": "verified_off",
+          "base_recording": "inactive",
+          "indicator": "updating"
+        },
+        "forbidden": [
+          "start_base_recording_requested",
+          "start_voice_turn_requested",
+          "privacy_guard_assert_request",
+          "microphone_acquire_request",
+          "audio_frame"
+        ]
+      }
+    },
+    {
+      "id": "contextual-maintenance-hold-confirms-at-2000-ms",
+      "operation": "gesture",
+      "initial": {
+        "maintenance": "awaiting_confirmation",
+        "confirmation_operation": "firmware_update",
+        "confirmation_lease_expires_at_ms": 15000,
+        "mic_truth": "verified_off"
+      },
+      "inputs": [
+        { "at_ms": 1000, "type": "button_down" },
+        { "at_ms": 3000, "type": "contextual_hold_deadline" },
+        { "at_ms": 3100, "type": "button_up" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 3000, "type": "physical_confirmation", "operation": "firmware_update" }
+        ],
+        "terminal": {
+          "mic_truth": "verified_off"
+        },
+        "forbidden": [
+          "start_voice_turn_requested",
+          "start_base_recording_requested",
+          "audio_frame"
+        ]
+      }
+    },
+    {
+      "id": "privacy-guard-failure-rejects-recording-acquisition",
+      "operation": "capture_fault",
+      "initial": {
+        "mic_truth": "verified_off",
+        "base_recording": "inactive",
+        "fault": "none"
+      },
+      "inputs": [
+        { "at_ms": 0, "type": "start_base_recording_requested" },
+        { "at_ms": 1, "type": "privacy_guard_failed" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 1, "type": "base_recording_refused", "reason": "privacy_output_unavailable" }
+        ],
+        "output_patterns": [
+          { "at_ms": 1, "haptic": "fault" }
+        ],
+        "shell": {
+          "capture": "verified_idle",
+          "fault": "privacy_output_unavailable"
+        },
+        "terminal": {
+          "mic_truth": "verified_off",
+          "base_recording": "inactive",
+          "fault": "fatal_privacy"
+        },
+        "forbidden": [
+          "microphone_acquire_request",
+          "audio_frame",
+          "base_recording_started"
+        ]
+      }
+    },
+    {
+      "id": "storage-full-stops-at-durable-boundary",
+      "operation": "capture_fault",
+      "initial": {
+        "mic_truth": "acquired",
+        "base_recording": "active",
+        "storage": "healthy",
+        "indicator": "privacy_recording"
+      },
+      "inputs": [
+        { "at_ms": 100, "type": "storage_state_changed", "value": "full" },
+        { "at_ms": 110, "type": "last_durable_frame_committed" },
+        { "at_ms": 120, "type": "microphone_released" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 100, "type": "safe_capture_stop_requested", "reason": "local_durability_unavailable" },
+          { "at_ms": 120, "type": "base_recording_stopped", "reason": "local_durability_unavailable" }
+        ],
+        "output_patterns": [
+          { "until_ms": 120, "indicator": "privacy_recording" },
+          { "from_ms": 120, "indicator": "recoverable_fault" },
+          { "at_ms": 120, "haptic": "fault" }
+        ],
+        "terminal": {
+          "mic_truth": "verified_off",
+          "base_recording": "inactive",
+          "storage": "full",
+          "fault": "recoverable"
+        },
+        "suppressed_patterns": [
+          "recoverable_fault"
+        ],
+        "forbidden": [
+          "privacy_guard_off_before_120_ms",
+          "audio_frame_after_120_ms"
+        ]
+      }
+    },
+    {
+      "id": "fault-during-recording-cannot-blink-privacy-dark",
+      "operation": "output_arbitration",
+      "initial": {
+        "mic_truth": "acquired",
+        "base_recording": "active",
+        "indicator": "privacy_recording"
+      },
+      "inputs": [
+        { "at_ms": 100, "type": "recoverable_fault_raised", "reason": "link_degraded" },
+        { "at_ms": 200, "type": "charging_state_changed", "value": true },
+        { "at_ms": 300, "type": "status_repeat_requested" }
+      ],
+      "expected": {
+        "output_patterns": [
+          { "from_ms": 0, "indicator": "privacy_recording" },
+          { "at_ms": 100, "haptic": "warning" }
+        ],
+        "shell": {
+          "capture": "recording_local",
+          "fault": "link_degraded"
+        },
+        "terminal": {
+          "indicator": "privacy_recording"
+        },
+        "suppressed_patterns": [
+          "recoverable_fault",
+          "charging",
+          "ready_link_status"
+        ],
+        "forbidden": [
+          "privacy_guard_off",
+          "non_privacy_color_override"
+        ]
+      }
+    },
+    {
+      "id": "watchdog-restart-never-resumes-recording",
+      "operation": "lifecycle_projection",
+      "initial": {
+        "power": "operational",
+        "mic_truth": "acquired",
+        "base_recording": "active",
+        "base_recording_id": "recording-before-reset"
+      },
+      "inputs": [
+        { "at_ms": 100, "type": "watchdog_reset" },
+        { "at_ms": 101, "type": "boot_started" },
+        { "at_ms": 500, "type": "required_self_tests_passed" }
+      ],
+      "expected": {
+        "semantic_events": [
+          { "at_ms": 101, "type": "capture_discontinuity", "recording_id": "recording-before-reset" },
+          { "at_ms": 500, "type": "boot_ready" }
+        ],
+        "output_patterns": [
+          { "from_ms": 101, "until_ms": 500, "indicator": "booting" },
+          { "at_ms": 500, "haptic": "ready" }
+        ],
+        "terminal": {
+          "power": "operational",
+          "mic_truth": "verified_off",
+          "base_recording": "inactive"
+        },
+        "forbidden": [
+          "automatic_microphone_acquire",
+          "automatic_recording_resume",
+          "audio_frame_after_boot"
+        ]
+      }
+    },
+    {
+      "id": "aad-armed-idle-remains-distinct-from-capture",
+      "operation": "lifecycle_projection",
+      "initial": {
+        "mic_truth": "verified_off",
+        "base_recording": "inactive",
+        "acoustic_detector": "armed"
+      },
+      "inputs": [],
+      "expected": {
+        "shell": {
+          "capture": "verified_idle",
+          "secondary_label": "Microphone stream off; acoustic detector armed"
+        },
+        "terminal": {
+          "mic_truth": "verified_off",
+          "base_recording": "inactive",
+          "acoustic_detector": "armed"
+        },
+        "forbidden": [
+          "privacy_recording_indicator",
+          "encoded_audio_frame",
+          "retained_audio"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "type": "/problems/session-already-finalized",
+  "title": "Ingest session is already bound to another finalization",
+  "status": 409,
+  "code": "SESSION_ALREADY_FINALIZED",
+  "detail": "The immutable manifest was preserved and the contradictory finalization request was rejected.",
+  "traceId": "0190c6f0-7b21-7a40-8b11-00000000000f",
+  "details": {
+    "ingestSessionId": "0190c6f0-7b21-7a40-8b11-000000000002",
+    "manifestId": "0190c6f0-7b21-7a40-8b11-000000000009",
+    "existingManifestDigest": "sha256:0d8d99590e448cb6190db8b2b623f50121728cbdb4cff088a644a64912bbd0ca",
+    "receivedExpectedContentDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  }
+}

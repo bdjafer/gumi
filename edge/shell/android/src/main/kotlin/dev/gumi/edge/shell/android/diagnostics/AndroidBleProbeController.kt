@@ -44,20 +44,31 @@ data class BleProbeState(
 class AndroidBleProbeController(
     private val scanner: BleScanner,
     private val driverRegistry: DeviceDriverRegistry,
+    private val addressStabilityController: AndroidBleAddressStabilityProbeController,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
 ) : AutoCloseable {
     private val mutableState = MutableStateFlow(BleProbeState())
     private val firstObservations = mutableSetOf<String>()
     private val observedEndpoints = mutableSetOf<String>()
     private var scanJob: Job? = null
+    private var nextScanGeneration = 0L
+    private var activeScanGeneration: Long? = null
 
     val state: StateFlow<BleProbeState> = mutableState.asStateFlow()
+    val addressStabilityState: StateFlow<BleAddressStabilityProbeState> =
+        addressStabilityController.state
 
     fun start() {
         if (scanJob?.isActive == true) return
 
+        val generation = ++nextScanGeneration
+        activeScanGeneration = generation
+        addressStabilityController.beginGeneration(generation)
+        firstObservations.clear()
         observedEndpoints.clear()
-        mutableState.update { it.copy(scanning = true, nearbyDeviceCount = 0, error = null) }
+        // A card is actionable only after observation in this scan generation. Retaining a prior
+        // card would let a retry target stale transport evidence while the UI calls it fresh.
+        mutableState.value = BleProbeState(scanning = true)
         scanJob = scope.launch {
             try {
                 scanner.scan(
@@ -69,8 +80,9 @@ class AndroidBleProbeController(
                         it.copy(error = error.message ?: "Android BLE scan failed")
                     }
                 }.collect { event ->
+                    if (activeScanGeneration != generation) return@collect
                     when (event) {
-                        is BleScanEvent.Advertisement -> record(event)
+                        is BleScanEvent.Advertisement -> record(generation, event)
                         is BleScanEvent.Failure -> mutableState.update {
                             it.copy(
                                 scanning = false,
@@ -80,22 +92,33 @@ class AndroidBleProbeController(
                     }
                 }
             } finally {
-                mutableState.update { it.copy(scanning = false) }
+                if (activeScanGeneration == generation) {
+                    addressStabilityController.finishGeneration(generation)
+                    activeScanGeneration = null
+                    mutableState.update { it.copy(scanning = false) }
+                }
             }
         }
     }
 
     fun stop() {
+        activeScanGeneration?.let(addressStabilityController::finishGeneration)
+        activeScanGeneration = null
         scanJob?.cancel()
         scanJob = null
         mutableState.update { it.copy(scanning = false) }
     }
 
+    fun captureAddressStabilityBaseline(): Boolean =
+        addressStabilityController.captureBaseline()
+
     override fun close() {
+        addressStabilityController.reset()
         scope.cancel()
     }
 
-    private fun record(event: BleScanEvent.Advertisement) {
+    private fun record(generation: Long, event: BleScanEvent.Advertisement) {
+        if (activeScanGeneration != generation) return
         val advertisement = event.value
         if (observedEndpoints.add(advertisement.endpoint.ephemeralId)) {
             mutableState.update { current ->
@@ -104,6 +127,7 @@ class AndroidBleProbeController(
         }
         val selection = runCatching { driverRegistry.select(advertisement.endpoint) }.getOrNull()
             ?: return
+        addressStabilityController.observe(generation, advertisement.endpoint)
         val device = BleProbeDevice(
             endpoint = advertisement.endpoint,
             advertisedName = advertisement.endpoint.advertisedName ?: "Unnamed Omi",

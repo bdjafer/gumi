@@ -14,7 +14,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class DeviceDriverRegistryTest {
-    private val candidate = EndpointCandidate(TransportKind.SIMULATED, "fixture-1")
+    private val candidate = EndpointCandidate(TransportKind.BLE, "fixture-1")
 
     @Test
     fun `exact match wins over possible match`() {

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "gumi.media-ingest.assembly-conformance.v1",
+  "payloadFormat": "ogg-opus-page-fragment-v1",
+  "layoutProfile": "gumi.ogg-opus.single-packet-page.v1",
+  "chunks": [
+    {
+      "sequenceRange": { "first": "0", "last": "1" },
+      "payloadBytes": "168",
+      "contentDigest": "sha256:d857c547c6ffb1d8f9963a2c6ead0420501a3519b5b6f8acf51434e479adcb83",
+      "contentDigestHeader": "sha-256=:2FfFR8b/sdj5ljosbq0EIFAaNRm1tvis9RQ05Hmty4M=:",
+      "bodyBase64": "T2dnUwACAAAAAAAAAACpm4DTAAAAAKiA560BE09wdXNIZWFkAQE4AYA+AAAAAABPZ2dTAAAAAAAAAAAAAKmbgNMBAAAA+CxgXQEUT3B1c1RhZ3MEAAAAZ3VtaQAAAABPZ2dTAADAAwAAAAAAAKmbgNMCAAAAa3riXwEISAvkwTbsxYBPZ2dTAACABwAAAAAAAKmbgNMDAAAAitj7JQEJSAfJcifhROpQ"
+    },
+    {
+      "sequenceRange": { "first": "2", "last": "3" },
+      "payloadBytes": "73",
+      "contentDigest": "sha256:fcca7a06e2b685d5e7384d86bb2b1d0ddea657978f7962bc082a25fc50b53c16",
+      "contentDigestHeader": "sha-256=:/Mp6BuK2hdXnOE2GuysdDd6mV5ePeWK8CCol/FC1PBY=:",
+      "bodyBase64": "T2dnUwAAQAsAAAAAAACpm4DTBAAAANG8h+UBCEgL5ME27MWAT2dnUwAEeAwAAAAAAACpm4DTBQAAABe+9zwBCUgHyXIn4UTqUA=="
+    }
+  ],
+  "expectedByteLength": "241",
+  "expectedContentDigest": "sha256:cb8e3d3949474d1aa7ca9aedc45868a099c44ce4f258ca812a5ad41dbc9488bd"
+}

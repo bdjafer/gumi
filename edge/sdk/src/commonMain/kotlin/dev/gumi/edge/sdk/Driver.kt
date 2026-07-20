@@ -4,7 +4,6 @@ import kotlinx.coroutines.flow.Flow
 
 enum class TransportKind {
     BLE,
-    SIMULATED,
 }
 
 data class EndpointCandidate(
@@ -50,6 +49,8 @@ sealed interface TransportEvent {
 
 interface TransportSession {
     val endpoint: EndpointCandidate
+
+    /** Bounded, single-consumer transport stream owned by the device runtime. */
     val events: Flow<TransportEvent>
 
     suspend fun close()
@@ -72,11 +73,25 @@ interface DeviceSession {
     suspend fun close()
 }
 
+/**
+ * Session contract for drivers that have completed protocol/capability negotiation. Legacy probe
+ * sessions may continue to implement [DeviceSession] while they are migrated.
+ */
+interface NegotiatedDeviceSession : DeviceSession {
+    /** Null until provisioning has bound this transport session to a stable project device. */
+    val deviceId: DeviceId?
+    val capabilities: CapabilitySet
+}
+
 interface DeviceDriverProvider {
     val id: DriverId
 
     fun match(candidate: EndpointCandidate): DriverMatch
 
+    /**
+     * Match-time metadata only. It must not advertise negotiated capabilities or a guessed protocol
+     * version; those exist exclusively on the DeviceSession returned by [open].
+     */
     fun describe(candidate: EndpointCandidate): DeviceDescriptor
 
     suspend fun open(
@@ -84,3 +99,9 @@ interface DeviceDriverProvider {
         transport: TransportSession,
     ): DeviceSession
 }
+
+class DeviceOpenException(
+    val failure: ExpectedFailure,
+    message: String = failure.code.value,
+    cause: Throwable? = null,
+) : Exception(message, cause)

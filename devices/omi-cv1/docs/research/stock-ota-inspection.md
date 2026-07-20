@@ -1,10 +1,10 @@
 # Omi CV1 stock OTA inspection: v3.0.20
 
-Status: installed-release and baseline-candidate artifacts decoded and signatures verified; v3.0.20
-exact-source build compared; owned-device slot state still pending.
+Status: installed-release and later-migration reference artifacts decoded and signatures verified;
+v3.0.20 exact-source build compared; owned application slot matched, network/secondary state unobserved.
 
-This report is about the official release bundle, not yet about the exact images installed on the
-project's sealed pendant.
+This report primarily describes official release bundles. The later read-only owned-unit result is
+recorded only where it can be compared exactly; it did not expose complete slot state.
 
 ## Artifact identity
 
@@ -24,8 +24,9 @@ The checked-in machine-readable observation is
 ## Installed-release v3.0.12 oracle
 
 The owned unit reports `3.0.12`, so its matching official release was inspected separately before any
-MCU Manager request. This is the comparison oracle for the pending image-state read, not an assertion
-that the sealed unit contains those bytes until its returned hashes match.
+MCU Manager request. The 2026-07-20 read then returned the exact published application image `0` hash
+and no image `1` row. That proves the application bytes only; network identity and both images'
+secondary-slot state remain unobserved.
 
 | Field | Published v3.0.12 value |
 | --- | --- |
@@ -104,19 +105,20 @@ and it still needs proof against the owned unit.
 
 This creates a strict compatibility-phase rule:
 
-1. Keep both first Gumi canary MCUboot headers exactly `0.0.0+0`.
+1. Keep the first Gumi canary application-image header exactly `0.0.0+0`; the network image is not part
+   of the canary.
 2. Put the unambiguous Gumi revision in the application-level Device Information/capability response,
    not in the boot header.
-3. Prove that the official `0.0.0+0` package can replace the canary before changing functional capture
-   behavior.
+3. Prove that the exact official v3.0.12 `omi.signed.bin` application can replace the canary through the
+   single-image-0 path before changing functional capture behavior.
 4. Do not raise the boot version while the stock bootloader is the only recovery path. A higher accepted
-   version could make every published stock recovery image a prohibited downgrade.
+   version could make the exact official v3.0.12 application recovery image a prohibited downgrade.
 5. Introduce project-owned release ordering through a signed Gumi manifest/updater. A security counter
    cannot be retrofitted into the stock bootloader merely by adding a TLV to an application image.
 
 Nordic's Android Device Manager also documents that nRF5340 multi-image upgrades support
 `CONFIRM_ONLY`, not test-and-revert. The canary therefore needs a deliberately tiny change and a proven
-forward recovery package; automatic rollback is not available.
+forward recovery application image; automatic rollback is not available.
 
 ## Reproduction result
 

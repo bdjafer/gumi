@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "gumi.media-processing.create-job.v1",
+  "requestId": "0190c6f0-7b21-7a40-8b11-000000000002",
+  "inputManifest": {
+    "manifestId": "0190c6f0-7b21-7a40-8b11-000000000001",
+    "expectedManifestDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "pipeline": {
+    "pipelineId": "transcription.v1",
+    "configurationDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "provider": {
+      "providerId": "fixture-provider",
+      "model": "fixture-transcribe",
+      "modelVersion": "2026-07-19"
+    },
+    "languageHint": "en-US"
+  }
+}

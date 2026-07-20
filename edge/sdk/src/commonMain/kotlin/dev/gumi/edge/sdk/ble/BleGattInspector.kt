@@ -176,6 +176,6 @@ private val canonicalBleUuid = Regex(
     "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
 )
 
-private fun requireCanonicalBleUuid(uuid: String) {
+internal fun requireCanonicalBleUuid(uuid: String) {
     require(canonicalBleUuid.matches(uuid)) { "BLE UUID must be canonical: $uuid" }
 }

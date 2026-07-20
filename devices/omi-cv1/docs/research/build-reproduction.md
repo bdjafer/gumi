@@ -7,7 +7,8 @@ No physical device was contacted, updated, rebooted, or otherwise modified durin
 
 ## Verdict
 
-The upstream build is reproducible enough to begin an **application-core-only** Gumi canary:
+The upstream v3.0.20 build proves the pinned toolchain and an **application-core-only** development
+path:
 
 - the exact release commit builds successfully in the pinned Zephyr CI container;
 - the generated package has the same manifest structure, image indexes, slots, load addresses, image
@@ -23,8 +24,14 @@ published network image. A shipped B0 network bootloader checks that key against
 hash, so a clean local network build should be treated as incompatible until proven otherwise.
 
 M1 does not need a custom network controller. All planned capture, button, storage, BLE GATT, privacy,
-and update-policy behavior lives on the application core. The first canary therefore leaves the network
-core untouched and uploads image `0` only.
+and update-policy behavior lives on the application core. However, the owned unit reports v3.0.12, so
+this v3.0.20 reproduction is not the basis for its first canary. First reproduce the exact v3.0.12
+application, qualify a byte-different v3.0.12 canary, and establish exact-stock recovery from that
+observable canary state. The canary leaves the network core untouched and uploads image `0` only.
+
+The installed v3.0.12 application has since been reproduced in its prescribed NCS v2.9.0 toolchain.
+The passing result and the quarantined earlier wrong-SDK attempt are documented separately in
+[build-reproduction-v3.0.12.md](build-reproduction-v3.0.12.md).
 
 ## Pinned inputs
 
@@ -127,13 +134,27 @@ motion GATT/API surface.
 
 ## Qualification decision
 
-Stage 1 passes for application-core development. The next safe physical sequence is:
+Stage 1 passes as v3.0.20 toolchain and application-core evidence. It does not qualify a cross-release
+mutation of the installed v3.0.12 unit. The process stops after read-only inspection and offline updater
+review unless the owner provides a new explicit go/no-go. The future sequence is governed by
+[sealed-device-plan.md](sealed-device-plan.md):
 
 1. complete the Android read-only inventory;
 2. confirm the installed application/network image rows and the SMP image-number behavior;
-3. qualify an Android updater that uploads image `0` without writing image `1`;
-4. perform `stock application -> Gumi canary application -> stock application`; and
-5. proceed to functional capture changes only after that round trip is repeatable.
+3. prepare and review an Android updater that targets image `0` without writing image `1`, without
+   invoking it against the pendant;
+4. only after the first explicit go/no-go, install the exact byte-different Gumi v3.0.12 canary and
+   verify the canary application hash plus the unchanged network hash;
+5. only after a subsequent recovery go/no-go, install the exact official v3.0.12 application from the
+   canary source state and verify both published image hashes;
+6. under a later separate approval, repeat the canary transition; and
+7. proceed to functional capture changes only after the application-only round trip is repeatable.
+
+An official-stock-to-identical-stock operation is not used as qualification because the maintained
+high-level updater skips an already-active hash and lower-level confirmation is hash-addressed.
+
+Treat any complete v3.0.12 to v3.0.20 vendor migration as a separate experiment with its own explicit
+go/no-go; it is not part of the first canary qualification.
 
 Do not upload the locally generated `ipc_radio.bin`, `dfu_application.zip`, `merged.hex`, or
 `merged_CPUNET.hex` to the sealed consumer unit.

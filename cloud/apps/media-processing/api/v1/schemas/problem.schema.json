@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gumi.astrale.ai/schemas/media-processing/v1/problem.schema.json",
+  "title": "Gumi media processing problem",
+  "$defs": {
+    "Problem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "title", "status", "code", "traceId"],
+      "properties": {
+        "type": { "type": "string", "format": "uri" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "status": { "type": "integer", "minimum": 400, "maximum": 599 },
+        "code": {
+          "enum": [
+            "INVALID_REQUEST",
+            "AUTHENTICATION_REQUIRED",
+            "CONTROL_SCOPE_MISMATCH",
+            "WORKER_SCOPE_MISMATCH",
+            "CALLBACK_SCOPE_MISMATCH",
+            "PROCESSING_JOB_NOT_FOUND",
+            "INPUT_MANIFEST_NOT_FOUND",
+            "ATTEMPT_NOT_FOUND",
+            "RESULT_NOT_FOUND",
+            "TRANSCRIPT_PAGE_NOT_FOUND",
+            "REQUEST_ID_CONFLICT",
+            "INPUT_MANIFEST_DIGEST_MISMATCH",
+            "GENERATION_CONFLICT",
+            "LEASE_REVISION_CONFLICT",
+            "JOB_NOT_CLAIMABLE",
+            "JOB_NOT_RETRYABLE",
+            "RETRY_NOT_READY",
+            "JOB_TERMINAL",
+            "JOB_CANCELED",
+            "ATTEMPT_SUPERSEDED",
+            "ATTEMPT_LEASE_EXPIRED",
+            "ATTEMPT_LIMIT_REACHED",
+            "ATTEMPT_COMPLETION_CONFLICT",
+            "OUTCOME_UNKNOWN_ACK_REQUIRED",
+            "OUTCOME_UNKNOWN_REQUIRES_RECONCILIATION",
+            "COMPLETION_IN_PROGRESS",
+            "PROVIDER_PROVENANCE_CONFLICT",
+            "RESULT_PROVENANCE_CONFLICT",
+            "RESULT_DIGEST_MISMATCH",
+            "ARTIFACT_INTEGRITY_MISMATCH",
+            "ARTIFACT_TOO_LARGE",
+            "INPUT_MANIFEST_UNAVAILABLE",
+            "ARTIFACT_STAGE_NOT_FOUND",
+            "DURABILITY_UNAVAILABLE",
+            "RATE_LIMITED"
+          ]
+        },
+        "traceId": { "$ref": "common.schema.json#/$defs/OpaqueId" },
+        "retryAfterSeconds": { "$ref": "common.schema.json#/$defs/PositiveU64" }
+      }
+    }
+  }
+}

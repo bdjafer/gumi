@@ -1,0 +1,25 @@
+{
+  "name": "@gumi/realtime-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.12.1",
+  "scripts": {
+    "dev": "node src/index.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:contract": "node --test tests/contracts.test.mjs",
+    "test:core": "node --test tests/core.test.mjs",
+    "test:integration": "node --test tests/websocket-integration.test.mjs",
+    "test:boundary": "node --test tests/boundary.test.mjs",
+    "typecheck": "node scripts/check-sources.mjs",
+    "lint": "node --test tests/boundary.test.mjs",
+    "build": "node scripts/check-sources.mjs",
+    "verify": "npm run typecheck && npm run test:contract && npm run test:core && npm run test:integration && npm run test:boundary && npm run build"
+  },
+  "dependencies": {
+    "ws": "8.21.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gumi.astrale.ai/schemas/media-ingest/v1/common.schema.json",
+  "title": "Gumi media ingest v1 common values",
+  "$defs": {
+    "UuidV7": {
+      "type": "string",
+      "description": "Lowercase RFC 9562 UUIDv7 used as a stable opaque identity.",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "U64": {
+      "type": "string",
+      "description": "Canonical decimal unsigned 64-bit integer in the inclusive range 0..18446744073709551615. Consumers MUST parse it without IEEE-754 number coercion.",
+      "pattern": "^(?:0|[1-9][0-9]{0,18}|1[0-7][0-9]{18}|18[0-3][0-9]{17}|184[0-3][0-9]{16}|1844[0-5][0-9]{15}|18446[0-6][0-9]{14}|184467[0-3][0-9]{13}|1844674[0-3][0-9]{12}|184467440[0-6][0-9]{10}|1844674407[0-2][0-9]{9}|18446744073[0-6][0-9]{8}|1844674407370[0-8][0-9]{6}|18446744073709[0-4][0-9]{5}|184467440737095[0-4][0-9]{4}|1844674407370955[0][0-9]{3}|18446744073709551[0-5][0-9]{2}|184467440737095516[0][0-9]|1844674407370955161[0-4]|18446744073709551615)$",
+      "maxLength": 20,
+      "x-gumi-maximum": "18446744073709551615"
+    },
+    "PositiveU64": {
+      "type": "string",
+      "description": "Canonical positive decimal unsigned 64-bit integer in the inclusive range 1..18446744073709551615.",
+      "pattern": "^(?:[1-9][0-9]{0,18}|1[0-7][0-9]{18}|18[0-3][0-9]{17}|184[0-3][0-9]{16}|1844[0-5][0-9]{15}|18446[0-6][0-9]{14}|184467[0-3][0-9]{13}|1844674[0-3][0-9]{12}|184467440[0-6][0-9]{10}|1844674407[0-2][0-9]{9}|18446744073[0-6][0-9]{8}|1844674407370[0-8][0-9]{6}|18446744073709[0-4][0-9]{5}|184467440737095[0-4][0-9]{4}|1844674407370955[0][0-9]{3}|18446744073709551[0-5][0-9]{2}|184467440737095516[0][0-9]|1844674407370955161[0-4]|18446744073709551615)$",
+      "maxLength": 20,
+      "x-gumi-maximum": "18446744073709551615"
+    },
+    "U64ExclusiveBoundary": {
+      "type": "string",
+      "description": "Canonical positive decimal boundary for a half-open u64 sequence range. The value 18446744073709551616 is valid only as the exclusive boundary immediately after the largest u64 index.",
+      "pattern": "^(?:[1-9][0-9]{0,18}|1[0-7][0-9]{18}|18[0-3][0-9]{17}|184[0-3][0-9]{16}|1844[0-5][0-9]{15}|18446[0-6][0-9]{14}|184467[0-3][0-9]{13}|1844674[0-3][0-9]{12}|184467440[0-6][0-9]{10}|1844674407[0-2][0-9]{9}|18446744073[0-6][0-9]{8}|1844674407370[0-8][0-9]{6}|18446744073709[0-4][0-9]{5}|184467440737095[0-4][0-9]{4}|1844674407370955[0][0-9]{3}|18446744073709551[0-5][0-9]{2}|184467440737095516[0][0-9]|1844674407370955161[0-5]|18446744073709551616)$",
+      "maxLength": 20,
+      "x-gumi-maximum": "18446744073709551616"
+    },
+    "Sha256Digest": {
+      "type": "string",
+      "description": "SHA-256 digest encoded as lowercase hexadecimal with an explicit algorithm prefix.",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "ContentDigestHeader": {
+      "type": "string",
+      "description": "RFC 9530 Content-Digest field value carrying exactly one sha-256 member as a Structured Fields byte sequence.",
+      "pattern": "^sha-256=:[A-Za-z0-9+/]{43}=:$"
+    },
+    "Timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 timestamp with an explicit UTC offset. Identity and ordering never depend on this value."
+    },
+    "UtcTimestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 timestamp normalized to UTC with a trailing Z.",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,9})?Z$"
+    },
+    "CodecConfigurationId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+    },
+    "OpaqueMediaHandle": {
+      "type": "string",
+      "description": "Stable media-ingest handle resolved only through an authorized control API. It is not a provider URI, object-store key, or signed URL.",
+      "pattern": "^gumi-media:[a-z0-9][a-z0-9._~:/-]{0,510}[a-z0-9]$",
+      "minLength": 3,
+      "maxLength": 512
+    },
+    "DiscontinuityReason": {
+      "enum": [
+        "device-ring-overwrite",
+        "source-restart",
+        "source-reported-gap",
+        "edge-spool-loss",
+        "unknown"
+      ]
+    },
+    "SequenceRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Inclusive indexes of encoded media frames within one stream. Sequence values are independent of clocks and packet arrival order.",
+      "required": ["first", "last"],
+      "properties": {
+        "first": { "$ref": "#/$defs/U64" },
+        "last": { "$ref": "#/$defs/U64" }
+      }
+    },
+    "AudioCodec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "configurationId",
+        "sampleRateHz",
+        "channelCount",
+        "frameDurationUs"
+      ],
+      "properties": {
+        "name": {
+          "const": "opus",
+          "description": "Opus is the M1 transfer codec. A different codec requires a versioned contract change."
+        },
+        "configurationId": { "$ref": "#/$defs/CodecConfigurationId" },
+        "sampleRateHz": {
+          "type": "integer",
+          "minimum": 8000,
+          "maximum": 48000
+        },
+        "channelCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2
+        },
+        "frameDurationUs": {
+          "type": "integer",
+          "enum": [2500, 5000, 10000, 20000, 40000, 60000]
+        }
+      }
+    },
+    "OggSerialNumber": {
+      "type": "string",
+      "description": "Canonical decimal unsigned 32-bit Ogg logical-stream serial selected before muxing.",
+      "pattern": "^(?:0|[1-9][0-9]{0,8}|[1-3][0-9]{9}|4[01][0-9]{8}|42[0-8][0-9]{7}|429[0-3][0-9]{6}|4294[0-8][0-9]{5}|42949[0-5][0-9]{4}|429496[0-6][0-9]{3}|4294967[0-1][0-9]{2}|42949672[0-8][0-9]|429496729[0-5])$",
+      "maxLength": 10,
+      "x-gumi-maximum": "4294967295"
+    },
+    "OpusPreSkip48kSamples": {
+      "type": "string",
+      "description": "Canonical decimal unsigned 16-bit Opus pre-skip measured at 48 kHz.",
+      "pattern": "^(?:0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$",
+      "maxLength": 5,
+      "x-gumi-maximum": "65535"
+    },
+    "OggOpusLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Versioned deterministic mux facts. Combined with sequencePolicy and codec, these make every sparse chunk independently verifiable before durability.",
+      "required": ["profile", "serialNumber", "preSkip48kSamples"],
+      "properties": {
+        "profile": { "const": "gumi.ogg-opus.single-packet-page.v1" },
+        "serialNumber": { "$ref": "#/$defs/OggSerialNumber" },
+        "preSkip48kSamples": { "$ref": "#/$defs/OpusPreSkip48kSamples" }
+      }
+    }
+  }
+}

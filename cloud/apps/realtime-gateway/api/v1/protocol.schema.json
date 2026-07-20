@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gumi.astrale.ai/realtime-gateway/v1/protocol.schema.json",
+  "title": "Gumi realtime gateway v1 control frames",
+  "description": "Provider-neutral, admission-scoped WebSocket control and result frames for one VoiceTurn. Binary audio uses the companion x-gumi-binary-audio-frame layout.",
+  "oneOf": [
+    { "$ref": "#/$defs/ClientControlFrame" },
+    { "$ref": "#/$defs/ServerControlFrame" }
+  ],
+  "x-gumi-transport": {
+    "kind": "websocket",
+    "path": "/v1/realtime",
+    "subprotocol": "gumi.realtime.v1",
+    "authentication": "one admission-scoped Bearer credential in the HTTP Upgrade request",
+    "perMessageDeflate": false,
+    "maxControlFrameBytes": 16384,
+    "maxPendingMessages": 8
+  },
+  "x-gumi-binary-audio-frame": {
+    "byteOrder": "network",
+    "headerBytes": 72,
+    "maxPayloadBytes": 16384,
+    "maxFrameBytes": 16456,
+    "fields": [
+      { "name": "magic", "offset": 0, "bytes": 4, "constantAscii": "GRT1" },
+      { "name": "turnId", "offset": 4, "bytes": 16, "encoding": "UUIDv7 binary" },
+      { "name": "retryId", "offset": 20, "bytes": 16, "encoding": "UUIDv7 binary" },
+      { "name": "sequence", "offset": 36, "bytes": 4, "encoding": "uint32" },
+      { "name": "contentDigest", "offset": 40, "bytes": 32, "encoding": "raw SHA-256" },
+      { "name": "opusPayload", "offset": 72, "minBytes": 1, "maxBytes": 16384 }
+    ]
+  },
+  "x-gumi-turn-limits": {
+    "maxChunks": 8192,
+    "maxAudioBytes": 16777216,
+    "maxDisplayResultBytes": 4096,
+    "maxSessionTtlMs": 300000
+  },
+  "$defs": {
+    "UuidV7": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "Sha256Digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "ProviderTrace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["traceId", "attemptId"],
+      "properties": {
+        "traceId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 160 },
+        "attemptId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$", "maxLength": 160 }
+      }
+    },
+    "DisplayResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text", "trust"],
+      "properties": {
+        "kind": { "const": "display-text" },
+        "text": { "type": "string", "maxLength": 4096 },
+        "trust": { "const": "untrusted-provider-content" }
+      }
+    },
+    "AudioDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contentType", "codec", "sampleRateHz", "channels", "frameDurationMs"],
+      "properties": {
+        "contentType": { "const": "audio/opus" },
+        "codec": { "const": "opus" },
+        "sampleRateHz": { "enum": [16000, 48000] },
+        "channels": { "const": 1 },
+        "frameDurationMs": { "enum": [10, 20, 40, 60] }
+      }
+    },
+    "ResumeFence": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["turnId", "retryId", "nextSequence"],
+      "properties": {
+        "turnId": { "$ref": "#/$defs/UuidV7" },
+        "retryId": { "$ref": "#/$defs/UuidV7" },
+        "nextSequence": { "type": "integer", "minimum": 0, "maximum": 8192 }
+      }
+    },
+    "ClientHello": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "requestId", "protocol", "sessionId", "connectionId", "resume"],
+      "properties": {
+        "type": { "const": "client.hello" },
+        "requestId": { "$ref": "#/$defs/UuidV7" },
+        "protocol": { "const": "gumi.realtime.v1" },
+        "sessionId": { "$ref": "#/$defs/UuidV7" },
+        "connectionId": { "$ref": "#/$defs/UuidV7" },
+        "resume": { "$ref": "#/$defs/ResumeFence" }
+      }
+    },
+    "TurnStart": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "requestId", "turnId", "retryId", "admissionId", "correlationId", "audio"],
+      "properties": {
+        "type": { "const": "turn.start" },
+        "requestId": { "$ref": "#/$defs/UuidV7" },
+        "turnId": { "$ref": "#/$defs/UuidV7" },
+        "retryId": { "$ref": "#/$defs/UuidV7" },
+        "admissionId": { "$ref": "#/$defs/UuidV7" },
+        "correlationId": { "$ref": "#/$defs/UuidV7" },
+        "audio": { "$ref": "#/$defs/AudioDescriptor" }
+      }
+    },
+    "TurnEnd": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "requestId", "turnId", "retryId", "finalSequence", "sequenceDigest"],
+      "properties": {
+        "type": { "const": "turn.end" },
+        "requestId": { "$ref": "#/$defs/UuidV7" },
+        "turnId": { "$ref": "#/$defs/UuidV7" },
+        "retryId": { "$ref": "#/$defs/UuidV7" },
+        "finalSequence": { "type": "integer", "minimum": -1, "maximum": 8191 },
+        "sequenceDigest": { "$ref": "#/$defs/Sha256Digest" }
+      }
+    },
+    "TurnCancel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "requestId", "turnId", "retryId", "reason"],
+      "properties": {
+        "type": { "const": "turn.cancel" },
+        "requestId": { "$ref": "#/$defs/UuidV7" },
+        "turnId": { "$ref": "#/$defs/UuidV7" },
+        "retryId": { "$ref": "#/$defs/UuidV7" },
+        "reason": { "enum": ["user-release", "client-shutdown", "policy-revoked"] }
+      }
+    },
+    "TurnIdentityRead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "requestId", "turnId", "retryId"],
+      "properties": {
+        "type": { "enum": ["turn.status", "turn.reconcile"] },
+        "requestId": { "$ref": "#/$defs/UuidV7" },
+        "turnId": { "$ref": "#/$defs/UuidV7" },
+        "retryId": { "$ref": "#/$defs/UuidV7" }
+      }
+    },
+    "ClientControlFrame": {
+      "oneOf": [
+        { "$ref": "#/$defs/ClientHello" },
+        { "$ref": "#/$defs/TurnStart" },
+        { "$ref": "#/$defs/TurnEnd" },
+        { "$ref": "#/$defs/TurnCancel" },
+        { "$ref": "#/$defs/TurnIdentityRead" }
+      ]
+    },
+    "TurnStatusProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sessionId", "connectionGeneration", "turn"],
+      "properties": {
+        "sessionId": { "$ref": "#/$defs/UuidV7" },
+        "connectionGeneration": { "type": "integer", "minimum": 1 },
+        "turn": {
+          "oneOf": [
+            { "$ref": "#/$defs/TurnProjection" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "TurnFailure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "retryable"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "maxLength": 80 },
+        "retryable": { "type": "boolean" }
+      }
+    },
+    "TurnProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["turnId", "retryId", "correlationId", "state", "nextSequence", "acknowledgedSequence", "receivedBytes", "sequenceDigest", "providerTrace", "outcomeUnknownPhase", "failure", "result"],
+      "properties": {
+        "turnId": { "$ref": "#/$defs/UuidV7" },
+        "retryId": { "$ref": "#/$defs/UuidV7" },
+        "correlationId": { "$ref": "#/$defs/UuidV7" },
+        "state": {
+          "enum": ["opening-provider", "receiving", "sending-audio", "finishing", "cancelling", "reconciling", "outcome-unknown", "completed", "cancelled", "failed"]
+        },
+        "nextSequence": { "type": "integer", "minimum": 0, "maximum": 8192 },
+        "acknowledgedSequence": { "type": "integer", "minimum": -1, "maximum": 8191 },
+        "receivedBytes": { "type": "integer", "minimum": 0, "maximum": 16777216 },
+        "sequenceDigest": { "$ref": "#/$defs/Sha256Digest" },
+        "providerTrace": {
+          "oneOf": [
+            { "$ref": "#/$defs/ProviderTrace" },
+            { "type": "null" }
+          ]
+        },
+        "outcomeUnknownPhase": {
+          "type": ["string", "null"],
+          "enum": ["open", "audio", "finish", "cancel", "reconcile", null]
+        },
+        "failure": {
+          "oneOf": [
+            { "$ref": "#/$defs/TurnFailure" },
+            { "type": "null" }
+          ]
+        },
+        "result": {
+          "oneOf": [
+            { "$ref": "#/$defs/DisplayResult" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "ServerReady": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "requestId", "protocol", "sessionId", "connectionGeneration", "limits", "status"],
+      "properties": {
+        "type": { "const": "server.ready" },
+        "requestId": { "$ref": "#/$defs/UuidV7" },
+        "protocol": { "const": "gumi.realtime.v1" },
+        "sessionId": { "$ref": "#/$defs/UuidV7" },
+        "connectionGeneration": { "type": "integer", "minimum": 1 },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxControlFrameBytes", "maxAudioPayloadBytes", "maxAudioBytesPerTurn", "maxChunksPerTurn", "maxPendingMessages"],
+          "properties": {
+            "maxControlFrameBytes": { "const": 16384 },
+            "maxAudioPayloadBytes": { "const": 16384 },
+            "maxAudioBytesPerTurn": { "const": 16777216 },
+            "maxChunksPerTurn": { "const": 8192 },
+            "maxPendingMessages": { "const": 8 }
+          }
+        },
+        "status": { "$ref": "#/$defs/TurnStatusProjection" }
+      }
+    },
+    "TurnAccepted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "requestId", "replay", "sessionId", "turnId", "retryId", "correlationId", "nextSequence", "sequenceDigest", "providerTrace"],
+      "properties": {
+        "type": { "const": "turn.accepted" },
+        "requestId": { "$ref": "#/$defs/UuidV7" },
+        "replay": { "type": "boolean" },
+        "sessionId": { "$ref": "#/$defs/UuidV7" },
+        "turnId": { "$ref": "#/$defs/UuidV7" },
+        "retryId": { "$ref": "#/$defs/UuidV7" },
+        "correlationId": { "$ref": "#/$defs/UuidV7" },
+        "nextSequence": { "type": "integer", "minimum": 0, "maximum": 8192 },
+        "sequenceDigest": { "$ref": "#/$defs/Sha256Digest" },
+        "providerTrace": { "$ref": "#/$defs/ProviderTrace" }
+      }
+    },
+    "AudioAcknowledgement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "turnId", "retryId", "sequence", "contentDigest", "sequenceDigest", "disposition"],
+      "properties": {
+        "type": { "const": "audio.ack" },
+        "turnId": { "$ref": "#/$defs/UuidV7" },
+        "retryId": { "$ref": "#/$defs/UuidV7" },
+        "sequence": { "type": "integer", "minimum": 0, "maximum": 8191 },
+        "contentDigest": { "$ref": "#/$defs/Sha256Digest" },
+        "sequenceDigest": { "$ref": "#/$defs/Sha256Digest" },
+        "disposition": { "enum": ["accepted", "duplicate"] }
+      }
+    },
+    "TurnStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "requestId", "replay", "status"],
+      "properties": {
+        "type": { "const": "turn.status" },
+        "requestId": { "$ref": "#/$defs/UuidV7" },
+        "replay": { "type": "boolean" },
+        "status": { "$ref": "#/$defs/TurnStatusProjection" }
+      }
+    },
+    "TurnResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "requestId", "replay", "sessionId", "turnId", "retryId", "correlationId", "outcome", "sequenceDigest", "providerTrace", "result"],
+      "properties": {
+        "type": { "const": "turn.result" },
+        "requestId": { "$ref": "#/$defs/UuidV7" },
+        "replay": { "type": "boolean" },
+        "sessionId": { "$ref": "#/$defs/UuidV7" },
+        "turnId": { "$ref": "#/$defs/UuidV7" },
+        "retryId": { "$ref": "#/$defs/UuidV7" },
+        "correlationId": { "$ref": "#/$defs/UuidV7" },
+        "outcome": { "const": "completed" },
+        "sequenceDigest": { "$ref": "#/$defs/Sha256Digest" },
+        "providerTrace": { "$ref": "#/$defs/ProviderTrace" },
+        "result": { "$ref": "#/$defs/DisplayResult" }
+      }
+    },
+    "ErrorFrame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "requestId", "code", "message", "retryable"],
+      "properties": {
+        "type": { "const": "error" },
+        "requestId": { "oneOf": [{ "$ref": "#/$defs/UuidV7" }, { "type": "null" }] },
+        "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "maxLength": 80 },
+        "message": { "type": "string", "maxLength": 240 },
+        "retryable": { "type": "boolean" }
+      }
+    },
+    "ServerControlFrame": {
+      "oneOf": [
+        { "$ref": "#/$defs/ServerReady" },
+        { "$ref": "#/$defs/TurnAccepted" },
+        { "$ref": "#/$defs/AudioAcknowledgement" },
+        { "$ref": "#/$defs/TurnStatus" },
+        { "$ref": "#/$defs/TurnResult" },
+        { "$ref": "#/$defs/ErrorFrame" }
+      ]
+    }
+  }
+}

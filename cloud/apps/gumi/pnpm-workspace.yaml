@@ -1,0 +1,36 @@
+# The client SPA (served under /ui/*) is a workspace package, so a single
+# `pnpm install` at the project root installs both the domain and the client.
+packages:
+  - 'client'
+
+# pnpm blocks dependency build scripts by default; these need their postinstall
+# to run (workerd is wrangler's runtime — without it `pnpm dev`/`pnpm prod`
+# fail). Internal guarded preinstalls are explicitly denied because they are
+# no-ops outside the umbrella workspace.
+allowBuilds:
+  esbuild: true
+  sharp: true
+  workerd: true
+  # Explicit `false` for the @astrale-os no-op preinstalls — without these,
+  # `pnpm add` of a new version re-prompts and writes placeholder entries here.
+  '@astrale-os/kernel-api': false
+  '@astrale-os/kernel-client': false
+  '@astrale-os/kernel-core': false
+  '@astrale-os/kernel-dsl': false
+  '@astrale-os/kernel-server': false
+  '@astrale-os/sdk': false
+  '@astrale-os/shell': false
+  '@astrale-os/shell-react': false
+  # Optional native msgpack acceleration; the JS fallback is the portable
+  # scaffold baseline and does not require executing a transitive build script.
+  msgpackr-extract: false
+
+# Keep pnpm 11's one-day default non-strict and never install implicitly before
+# `pnpm run` or `pnpm exec`.
+minimumReleaseAgeStrict: false
+verifyDepsBeforeRun: false
+# create-astrale-domain: first-party scopes
+minimumReleaseAgeExclude:
+  - '@astrale-domains/*'
+  - '@astrale-os/*'
+# /create-astrale-domain

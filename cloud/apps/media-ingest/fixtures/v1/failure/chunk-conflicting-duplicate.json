@@ -1,0 +1,15 @@
+{
+  "type": "/problems/chunk-digest-conflict",
+  "title": "Chunk identity is already bound to different bytes",
+  "status": 409,
+  "code": "CHUNK_DIGEST_CONFLICT",
+  "detail": "The chunkId already exists with a different SHA-256 digest; the durable object was not overwritten.",
+  "traceId": "0190c6f0-7b21-7a40-8b11-00000000000b",
+  "details": {
+    "ingestSessionId": "0190c6f0-7b21-7a40-8b11-000000000002",
+    "streamId": "0190c6f0-7b21-7a40-8b11-000000000006",
+    "chunkId": "0190c6f0-7b21-7a40-8b11-000000000007",
+    "existingDigest": "sha256:d857c547c6ffb1d8f9963a2c6ead0420501a3519b5b6f8acf51434e479adcb83",
+    "receivedDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  }
+}

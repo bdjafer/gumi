@@ -1,0 +1,18 @@
+{
+  "type": "/problems/finalization-stream-set-mismatch",
+  "title": "Finalization repeats a declared stream identity",
+  "status": 409,
+  "code": "FINALIZATION_STREAM_SET_MISMATCH",
+  "detail": "The request repeated a streamId and was rejected before committing a manifest.",
+  "traceId": "0190c6f0-7b21-7a40-8b11-000000000010",
+  "details": {
+    "ingestSessionId": "0190c6f0-7b21-7a40-8b11-000000000002",
+    "declaredStreamIds": [
+      "0190c6f0-7b21-7a40-8b11-000000000006",
+      "0190c6f0-7b21-7a40-8b11-000000000006"
+    ],
+    "requiredStreamIds": [
+      "0190c6f0-7b21-7a40-8b11-000000000006"
+    ]
+  }
+}

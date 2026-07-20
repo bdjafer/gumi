@@ -1,10 +1,10 @@
 package dev.gumi.edge.shell.linux
 
 import dev.gumi.devices.omicv1.OmiCv1DriverProvider
-import dev.gumi.devices.omicv1.OmiCv1Protocol
+import dev.gumi.devices.omicv1.simulator.OmiCv1Simulator
 import dev.gumi.edge.runtime.DeviceDriverRegistry
-import dev.gumi.edge.sdk.EndpointCandidate
-import dev.gumi.edge.sdk.TransportKind
+import dev.gumi.edge.sdk.NegotiatedDeviceSession
+import kotlinx.coroutines.runBlocking
 
 data class DiagnosticProjection(
     val host: String,
@@ -22,25 +22,30 @@ data class DiagnosticProjection(
     }
 }
 
-fun buildDiagnosticProjection(): DiagnosticProjection {
-    val endpoint = EndpointCandidate(
-        transport = TransportKind.SIMULATED,
-        ephemeralId = "simulated:omi-cv1",
-        advertisedServiceUuids = setOf(OmiCv1Protocol.OFFLINE_STORAGE_SERVICE_UUID),
-    )
+/** Opens and negotiates the same BLE-shaped Omi session that a platform host will use. */
+fun buildDiagnosticProjection(): DiagnosticProjection = runBlocking {
+    val simulator = OmiCv1Simulator()
     val registry = DeviceDriverRegistry(listOf(OmiCv1DriverProvider()))
-    val selection = registry.select(endpoint)
-    val descriptor = selection.provider.describe(endpoint)
-
-    return DiagnosticProjection(
-        host = "linux-jvm",
-        driverId = descriptor.driverId.value,
-        deviceModel = descriptor.model,
-        protocolVersion = descriptor.protocolVersion,
-        capabilityKeys = descriptor.capabilities.map { it.key.value },
-    )
+    val selection = registry.select(simulator.endpoint)
+    val session = selection.provider.open(
+        simulator.endpoint,
+        simulator.connect(simulator.endpoint),
+    ) as NegotiatedDeviceSession
+    try {
+        DiagnosticProjection(
+            host = "linux-jvm",
+            driverId = session.descriptor.driverId.value,
+            deviceModel = session.descriptor.model,
+            protocolVersion = session.descriptor.protocolVersion,
+            capabilityKeys = session.capabilities.keys().map { it.value }.sorted(),
+        )
+    } finally {
+        session.close()
+    }
 }
 
 fun main() {
     println(buildDiagnosticProjection().render())
+    println()
+    println(buildPortableControlPlaneWitness().render())
 }

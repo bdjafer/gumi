@@ -25,8 +25,10 @@ not be committed.
 
 ## Prepared-workspace commands
 
-The current macOS ARM64 workspace has the verified tools under `local/`. The repository launcher sets
-all tool and cache paths without changing the machine-wide Java or Android setup:
+The current macOS ARM64 workspace has the verified tools under `local/`. The repository launcher
+prefers those pins without changing the machine-wide Java or Android setup. On another host or in CI it
+accepts an explicit `JAVA_HOME` plus `ANDROID_SDK_ROOT`/`ANDROID_HOME`, and preserves externally selected
+Gradle/Android cache homes:
 
 ```sh
 ./gumiw verifyArchitecture \
@@ -37,6 +39,9 @@ all tool and cache paths without changing the machine-wide Java or Android setup
   :edge:shell:android:assembleDebug
 
 ./gumiw :edge:shell:linux:run
+
+# Complete offline gate: every Gradle module, cloud app/workspace, and self-contained shell/HIL test.
+./gumiw verifyWorkspace
 ```
 
 The debug APK is generated at
@@ -62,8 +67,9 @@ For another macOS ARM64 checkout:
 6. Run `./gumiw projects`, then the verification command above.
 
 The Gradle distribution itself does not need a separate manual install: `gradlew` downloads it and
-checks `distributionSha256Sum` before execution. Other host architectures may use a system JDK 17 and
-Android SDK with `./gradlew`; `gumiw` currently describes the verified macOS ARM64 witness only.
+checks `distributionSha256Sum` before execution. Other host architectures use the same `gumiw` entrypoint
+with a system JDK 17 and Android SDK. The GitHub Actions workflow installs the declared toolchain and
+runs `verifyWorkspace`; that CI result remains distinct from physical handset/Omi qualification.
 
 ## Android handset handoff
 

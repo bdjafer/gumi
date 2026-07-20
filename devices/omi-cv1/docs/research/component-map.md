@@ -4,8 +4,9 @@ Status: BOM, board definition, and production-source map; exact population and b
 sealed unit remain a bench question.
 
 This document separates a chip's theoretical capability from what the CV1 board wires and what the
-v3.0.20 application actually enables. A powerful component on the BOM is not automatically a usable
-Gumi capability.
+v3.0.20 candidate application actually enables. The owned unit runs v3.0.12, so version-specific source
+behavior is not promoted to installed-device behavior without a bench observation. A powerful component
+on the BOM is not automatically a usable Gumi capability.
 
 ## Compute, clocks, and memory
 
@@ -28,7 +29,7 @@ the batch layout consumes about 455 bytes per record before device-level overhea
 | --- | --- | --- | --- |
 | Two TDK/InvenSense `T5838` microphones | Shared PDM clock P1.01 and stereo data P1.00; 1.8 V rail enable P1.04; threshold P1.05; acoustic wake P1.02 | Captures interleaved 16 kHz, 16-bit, two-channel blocks, then averages L/R to mono. Encodes 20 ms Opus CELT frames at target 32 kbit/s VBR, complexity 3, no DTX/FEC | Preserve channels for measurement before deciding mono; explicit Idle must stop PDM. Hardware acoustic activity can wake from low-power silence but must not redefine recording consent |
 | ST `LSM6DS3TR-C` U5 | I2C address `0x6a`, IRQ P1.13, switched supply enable P1.12 | The pristine release build compiles I2C, the LSM6DSL driver, and timestamp helper, but disables `CONFIG_OMI_ENABLE_ACCELEROMETER`, the motion GATT service, and configured sampling | Latent 3-axis accelerometer + 3-axis gyroscope. Tap/FIFO/orientation remain unqualified and out of M1's critical path |
-| Tactile button K2 | P0.26, pull-up, active-low interrupt | Source recognizes tap gestures; current long hold owns power-off | Only physical general-purpose user input. Gesture thresholds/conflicts need hardware-in-loop qualification |
+| Tactile button K2 | P0.26, pull-up, active-low interrupt | v3.0.20 source recognizes tap gestures and assigns a three-second hold to power-off. The installed v3.0.12 tag instead assigns single tap to shutdown and a one-second long press to notification; it also configures the active-low button as the intended system-off wake source. The owned unit did not wake from owner button attempts while off and recovered on charger insertion; the off trigger and exact attempted press grammar were not observed | Only physical general-purpose user input. Gumi's proposed [human-I/O v1](../../protocols/human-io/v1/README.md) reserves Normal-mode hold for VoiceTurn, removes the Normal-mode power gesture, requires charger-independent qualified-button wake, and keeps boundary/false-gesture HIL qualification explicit |
 | Battery voltage and charge state | SAADC AIN0 through switched divider; charger status P0.07 | Battery percentage is a voltage-profile estimate with median/EMA filtering, not a coulomb counter; charge is a binary GPIO state | Expose voltage, estimated percent, charge state, and uncertainty separately |
 
 There is no identified ambient-light, proximity, temperature, barometer, magnetometer, camera, touch
@@ -42,7 +43,13 @@ an ambient-temperature instrument.
 | --- | --- | --- |
 | RGB indication | BOM lists two `MHPA0606RGBDT` packages; one three-channel PWM mapping uses P0.20/P0.21/P0.22 | Color and dimming are controllable, but independent control of both physical packages is not shown by the board definition; treat them as one logical indicator until measured |
 | Haptic | `LBM0525A4123F`, 3 V, 85 mA, nominal 10,000 rpm; GPIO P0.25 | Simple switched vibration, not a precision waveform/LRA driver |
-| Power latch/control | GPIO P0.05 active-low plus charger/protection/power ICs | Firmware can initiate shutdown; reset/recovery behavior must be measured |
+| Power latch/control | GPIO P0.05 active-low plus charger/protection/power ICs | Firmware can initiate shutdown. On the owned stock unit, charger insertion recovered an off state that button attempts did not; trigger, elapsed time, root cause, and electrical wake path remain unmeasured |
+
+The stock application writes RGB and haptic outputs from multiple modules and gives colors overlapping
+boot, link, charging, time, and fault meanings. Those are source facts, not a privacy contract. Gumi's
+target uses one firmware-owned feedback arbiter and reserves a continuous red base for microphone-active
+or microphone-unknown state; brightness, optical visibility, both-package behavior, and haptic patterns
+remain bench gates.
 
 No speaker or general motor/actuator connector is identified. Generic speaker code is disabled and does
 not make audio output a CV1 feature.
@@ -51,7 +58,7 @@ not make audio output a CV1 feature.
 
 | Interface | Physical/source reality | M1 decision |
 | --- | --- | --- |
-| Bluetooth LE | nRF5340 network core, HCI IPC, source requests large MTU and 2M/Coded PHY behavior; one active connection | Primary CV1 link. Actual services, security, MTU, PHY, range, and background throughput come from the Android probe/bench |
+| Bluetooth LE | nRF5340 network core, HCI IPC, source requests large MTU and 2M/Coded PHY behavior; one active connection. Live audio uses a 3-byte `u16le sequence + u8 fragment-index` envelope before each Opus fragment | Primary CV1 link. Gumi requests ATT MTU 512, requires negotiated MTU >=166 for the 160-byte source maximum, strips/validates the envelope, and still requires physical MTU, boundary, range, and background-throughput evidence |
 | Wi-Fi 6 | Nordic `nRF7002-CEAA-R7`, QSPI at 24 MHz, 2.4/5 GHz board includes, radio coexistence lines and shared RF path | Real hardware, but current release history disabled the application Wi-Fi path to improve BLE sync. Do not put Wi-Fi on M1's critical path |
 | UART | P0.03 TX, P0.02 RX at 115200 in device tree | Development console signal exists in source; inaccessible under the sealed/no-fixture constraint unless exposed through external contacts |
 | Pogo/test contacts | Six mainboard pogo pins plus two charger contacts in the BOM | Likely power/debug/production access, but exact accessible mapping is not claimed without schematic/fixture proof |
@@ -66,8 +73,9 @@ host interface for the sealed M1 path.
 - TI `BQ25101` linear charger and `GLF73910` battery protection.
 - TI `TPS628438` 600 mA buck, 3.3 V and 1.8 V LDOs, and two `TPS22916` load switches.
 - 10 kOhm NTC component in the BOM; exposed thermal protection/telemetry behavior is not yet confirmed.
-- Firmware hard-shuts down below a measured 3500 mV threshold and uses separate empirical
-  charge/discharge voltage-to-percent tables.
+- v3.0.20 source hard-shuts down below a measured 3500 mV threshold and uses separate empirical
+  charge/discharge voltage-to-percent tables. That threshold is not yet a qualified Gumi warning or
+  shutdown budget on the owned unit.
 
 There is no identified fuel-gauge IC, secure element, TPM, or user-replaceable battery. Power budgets
 must be measured for true Idle, AAD-armed Idle, Recording, VoiceTurn, BLE sync, Wi-Fi experiments, and

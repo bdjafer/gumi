@@ -1,0 +1,14 @@
+{
+  "type": "/problems/finalization-range-conflict",
+  "title": "Durable data exists beyond the declared terminal range",
+  "status": 409,
+  "code": "FINALIZATION_RANGE_CONFLICT",
+  "detail": "The request declared 0 as terminal but durable state already extends through 1; no manifest was committed.",
+  "traceId": "0190c6f0-7b21-7a40-8b11-000000000011",
+  "details": {
+    "ingestSessionId": "0190c6f0-7b21-7a40-8b11-000000000002",
+    "streamId": "0190c6f0-7b21-7a40-8b11-000000000006",
+    "declaredExpectedRange": { "first": "0", "last": "0" },
+    "durableRanges": [{ "first": "0", "last": "1" }]
+  }
+}

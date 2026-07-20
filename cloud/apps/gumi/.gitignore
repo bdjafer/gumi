@@ -1,0 +1,16 @@
+# Deps
+node_modules/
+
+# Generated plumbing (worker entry, wrangler config, identity, spec)
+.astrale/
+.domain-studio/.cache/
+
+# Worker dev + build artifacts
+.dev.vars
+.wrangler/
+.dist/
+
+# Secrets — every .env.<env> is gitignored; .env.example is the only one tracked
+.env
+.env.*
+!.env.example

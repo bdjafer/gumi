@@ -1,0 +1,266 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gumi.astrale.ai/schemas/media-ingest/v1/session.schema.json",
+  "title": "Gumi media ingest v1 session payloads",
+  "$defs": {
+    "StreamPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "One uniquely identified stream policy. sequencePolicy.first is the mandatory first sequence of any successful finalization; maximumLast is only an authorization bound, not a prediction of capture length.",
+      "required": [
+        "streamId",
+        "kind",
+        "sequencePolicy",
+        "maxChunkBytes",
+        "maxTotalBytes",
+        "codec",
+        "oggLayout"
+      ],
+      "properties": {
+        "streamId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "kind": { "const": "audio" },
+        "sequencePolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["first", "maximumLast"],
+          "properties": {
+            "first": { "$ref": "./common.schema.json#/$defs/U64" },
+            "maximumLast": { "$ref": "./common.schema.json#/$defs/U64" }
+          }
+        },
+        "maxChunkBytes": { "$ref": "./common.schema.json#/$defs/PositiveU64" },
+        "maxTotalBytes": { "$ref": "./common.schema.json#/$defs/PositiveU64" },
+        "codec": { "$ref": "./common.schema.json#/$defs/AudioCodec" },
+        "oggLayout": { "$ref": "./common.schema.json#/$defs/OggOpusLayout" }
+      }
+    },
+    "CreateIngestSessionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "requestId",
+        "captureSessionId",
+        "deviceId",
+        "edgeHostId",
+        "primaryStreamId",
+        "sessionExpiresInSeconds",
+        "credentialExpiresInSeconds",
+        "streams"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-ingest.create-session.v1" },
+        "requestId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "captureSessionId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "deviceId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "edgeHostId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "primaryStreamId": {
+          "$ref": "./common.schema.json#/$defs/UuidV7",
+          "description": "Must name exactly one member of streams and is preserved into the immutable manifest."
+        },
+        "sessionExpiresInSeconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 86400,
+          "description": "Lifetime of the resumable ingest session. It is independent of each bearer credential's shorter lifetime."
+        },
+        "credentialExpiresInSeconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 3600,
+          "description": "Lifetime requested for the initial capture-scoped bearer. A control-authorized refresh can issue another bearer without changing durable session state."
+        },
+        "streams": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/StreamPolicy" }
+        }
+      }
+    },
+    "IngestCredential": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tokenType", "accessToken", "issuedAt", "expiresAt"],
+      "properties": {
+        "tokenType": { "const": "Bearer" },
+        "accessToken": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 8192,
+          "description": "Opaque, short-lived, capture-scoped credential. Never persist it in Astrale or logs."
+        },
+        "issuedAt": { "$ref": "./common.schema.json#/$defs/Timestamp" },
+        "expiresAt": { "$ref": "./common.schema.json#/$defs/Timestamp" }
+      }
+    },
+    "CreateIngestSessionResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "requestId",
+        "ingestSessionId",
+        "captureSessionId",
+        "deviceId",
+        "edgeHostId",
+        "primaryStreamId",
+        "state",
+        "sessionExpiresAt",
+        "retainedUntil",
+        "credential",
+        "streams"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-ingest.session.v1" },
+        "requestId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "ingestSessionId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "captureSessionId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "deviceId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "edgeHostId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "primaryStreamId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "state": { "const": "open" },
+        "sessionExpiresAt": { "$ref": "./common.schema.json#/$defs/Timestamp" },
+        "retainedUntil": {
+          "$ref": "./common.schema.json#/$defs/Timestamp",
+          "description": "Earliest time at which unfinalized session bytes may be deleted. Finalized-object retention is governed separately."
+        },
+        "credential": { "$ref": "#/$defs/IngestCredential" },
+        "streams": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/StreamPolicy" }
+        }
+      }
+    },
+    "RefreshIngestCredentialRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "requestId", "expiresInSeconds"],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-ingest.refresh-credential.v1" },
+        "requestId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "expiresInSeconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 3600
+        }
+      }
+    },
+    "RefreshIngestCredentialResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "requestId", "ingestSessionId", "sessionExpiresAt", "credential"],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-ingest.refreshed-credential.v1" },
+        "requestId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "ingestSessionId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "sessionExpiresAt": { "$ref": "./common.schema.json#/$defs/Timestamp" },
+        "credential": { "$ref": "#/$defs/IngestCredential" }
+      }
+    },
+    "StreamStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "streamId",
+        "sequencePolicy",
+        "codec",
+        "oggLayout",
+        "accountedRange",
+        "committedRanges",
+        "missingRanges",
+        "durableThrough",
+        "terminalSequence",
+        "storedChunkCount",
+        "storedBytes"
+      ],
+      "properties": {
+        "streamId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "sequencePolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["first", "maximumLast"],
+          "properties": {
+            "first": { "$ref": "./common.schema.json#/$defs/U64" },
+            "maximumLast": { "$ref": "./common.schema.json#/$defs/U64" }
+          }
+        },
+        "codec": { "$ref": "./common.schema.json#/$defs/AudioCodec" },
+        "oggLayout": { "$ref": "./common.schema.json#/$defs/OggOpusLayout" },
+        "accountedRange": {
+          "oneOf": [
+            { "$ref": "./common.schema.json#/$defs/SequenceRange" },
+            { "type": "null" }
+          ],
+          "description": "Null before any chunk is durable; otherwise sequencePolicy.first through the greatest observed last sequence. committedRanges and missingRanges exactly partition this range."
+        },
+        "committedRanges": {
+          "type": "array",
+          "items": { "$ref": "./common.schema.json#/$defs/SequenceRange" }
+        },
+        "missingRanges": {
+          "type": "array",
+          "items": { "$ref": "./common.schema.json#/$defs/SequenceRange" }
+        },
+        "durableThrough": {
+          "oneOf": [
+            { "$ref": "./common.schema.json#/$defs/U64" },
+            { "type": "null" }
+          ]
+        },
+        "terminalSequence": {
+          "oneOf": [
+            { "$ref": "./common.schema.json#/$defs/U64" },
+            { "type": "null" }
+          ],
+          "description": "The unique durable audio sequence carrying EOS, or null while no terminal page is durable. No later sequence may become durable once set."
+        },
+        "storedChunkCount": { "$ref": "./common.schema.json#/$defs/U64" },
+        "storedBytes": { "$ref": "./common.schema.json#/$defs/U64" }
+      }
+    },
+    "IngestStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "ingestSessionId",
+        "captureSessionId",
+        "state",
+        "stateRevision",
+        "sessionExpiresAt",
+        "retainedUntil",
+        "streams",
+        "updatedAt"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-ingest.status.v1" },
+        "ingestSessionId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "captureSessionId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "state": {
+          "enum": ["open", "finalizing", "finalized", "failed", "expired"]
+        },
+        "stateRevision": {
+          "$ref": "./common.schema.json#/$defs/U64",
+          "description": "Monotonically increasing session snapshot revision. A client MUST NOT replace a higher revision with a lower one."
+        },
+        "sessionExpiresAt": { "$ref": "./common.schema.json#/$defs/Timestamp" },
+        "retainedUntil": { "$ref": "./common.schema.json#/$defs/Timestamp" },
+        "streams": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/StreamStatus" }
+        },
+        "manifestId": {
+          "oneOf": [
+            { "$ref": "./common.schema.json#/$defs/UuidV7" },
+            { "type": "null" }
+          ]
+        },
+        "updatedAt": { "$ref": "./common.schema.json#/$defs/Timestamp" }
+      }
+    }
+  }
+}

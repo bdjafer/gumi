@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "gumi.media-ingest.immutable-manifest-projection.v1",
+  "manifestId": "0190c6f0-7b21-7a40-8b11-000000000009",
+  "manifestDigest": "sha256:0d8d99590e448cb6190db8b2b623f50121728cbdb4cff088a644a64912bbd0ca",
+  "captureSessionId": "0190c6f0-7b21-7a40-8b11-000000000003",
+  "deviceId": "0190c6f0-7b21-7a40-8b11-000000000004",
+  "edgeHostId": "0190c6f0-7b21-7a40-8b11-000000000005",
+  "primaryStreamId": "0190c6f0-7b21-7a40-8b11-000000000006",
+  "objectHandle": "gumi-media:object/0190c6f0-7b21-7a40-8b11-00000000000a",
+  "objectContentDigest": "sha256:cb8e3d3949474d1aa7ca9aedc45868a099c44ce4f258ca812a5ad41dbc9488bd",
+  "objectByteLength": "241",
+  "objectContentType": "audio/ogg; codecs=opus",
+  "sequenceStart": "0",
+  "sequenceEndExclusive": "4",
+  "codec": "opus",
+  "sampleRateHz": 16000,
+  "channels": 1,
+  "startedAt": "2026-07-19T20:00:01Z",
+  "endedAt": "2026-07-19T20:00:01.060Z",
+  "durationMs": 60
+}

@@ -1,0 +1,13 @@
+{
+  "type": "/problems/sequence-gap",
+  "title": "Ingest session has missing sequence ranges",
+  "status": 409,
+  "code": "SEQUENCE_GAP",
+  "detail": "Finalization was not committed because the declared stream is not complete.",
+  "traceId": "0190c6f0-7b21-7a40-8b11-00000000000c",
+  "details": {
+    "ingestSessionId": "0190c6f0-7b21-7a40-8b11-000000000002",
+    "streamId": "0190c6f0-7b21-7a40-8b11-000000000006",
+    "missingRanges": [{ "first": "2", "last": "3" }]
+  }
+}

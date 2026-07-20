@@ -1,8 +1,8 @@
 # Repository and dependency layout
 
-Status: governing M1 monorepo boundary. Directory names become real only when their first executable
-artifact lands; `edge/sdk`, `edge/runtime`, `edge/platforms/android`, the Omi edge driver, and
-Android/Linux shell roots now do.
+Status: governing M1 monorepo boundary. The inventory below marks current directories as **landed** and
+future ownership slots as **planned**; a planned name is not evidence that code, tests, or a deployment
+exists.
 
 Gumi has three product substrates: physical devices, the local edge, and the cloud. Those boundaries
 remain stable when a phone becomes a Raspberry Pi, Omi becomes a different sensor or actuator, or a
@@ -15,40 +15,35 @@ acceptance gate. A monorepo does not imply one runtime, one deployment, or unres
 
 ```text
 gumi/
-├── devices/                       # Integrations for physical products
-│   └── omi-cv1/
-│       ├── firmware/              # History-preserving Omi firmware subtree
-│       ├── protocols/             # Omi GATT, ring, OTA schemas and golden fixtures
-│       ├── edge-driver/           # Omi plugin implementing the public edge device SDK
-│       ├── hardware/              # CAD/BOM only if Gumi starts owning hardware changes
-│       ├── tests/
-│       │   ├── compatibility/     # Firmware/driver protocol compatibility
-│       │   └── hardware-in-loop/  # Tests requiring an owned physical unit
-│       ├── docs/                  # Omi-specific research, security, and runbooks
-│       └── UPSTREAM.md            # Provenance, pins, and update procedure
-├── edge/                          # Software running on the always-on local computer
-│   ├── sdk/                       # Stable capability and plugin interfaces
-│   ├── runtime/                   # Portable state machines, spool, policy, sessions
-│   ├── adapters/
-│   │   └── cloud/                 # Cloud API clients implementing runtime ports
-│   ├── platforms/
-│   │   ├── android/               # GATT transport, lifecycle, Keystore, persistence
-│   │   └── linux/                 # BlueZ, systemd, secret store, persistence
-│   ├── shell/                     # Portable applicative shell and host distributions
-│   │   ├── application/           # Host-neutral use cases, projections, control API
-│   │   ├── android/               # First UI/composition root
-│   │   └── linux/                 # Raspberry Pi UI or headless composition root
-│   ├── services/                  # Future local daemons/apps not hosted by the shell
-│   └── tests/                     # Runtime, platform, restart, and edge E2E suites
-├── cloud/                         # Independently deployable remote applications
-│   ├── apps/
-│   │   ├── media-ingest/
-│   │   ├── media-processing/
-│   │   └── realtime-gateway/
-│   ├── packages/                  # Deliberate cloud-only shared libraries
-│   ├── platform/                  # Shared deployment foundations when they exist
-│   └── tests/                     # Cross-application cloud acceptance suites
-└── docs/                          # Only system-wide decisions, specifications, and runbooks
+├── devices/                                      [landed]
+│   └── omi-cv1/                                  [landed]
+│       ├── protocols/                            [landed: GATT/ring/OTA/HIO fixtures]
+│       ├── edge-driver/                          [landed]
+│       ├── simulator/                            [landed]
+│       ├── tests/hardware-in-loop/               [landed: guarded Android/Omi harness]
+│       ├── docs/ and UPSTREAM.md                  [landed]
+│       ├── firmware/                             [planned: history-preserving import]
+│       ├── hardware/                             [planned only if Gumi owns hardware]
+│       └── tests/compatibility/                  [planned if cross-module tests need it]
+├── edge/                                         [landed]
+│   ├── sdk/                                      [landed]
+│   ├── runtime/                                  [landed]
+│   ├── adapters/cloud/media-ingest/              [landed: chunk HTTP candidate]
+│   ├── platforms/android/                        [landed: BLE and spool candidates]
+│   ├── platforms/linux/                          [planned]
+│   ├── shell/application/                        [landed: host-neutral control plane]
+│   ├── shell/android/                            [landed: diagnostics and host scaffold]
+│   ├── shell/linux/                              [landed: JVM witness]
+│   ├── services/                                 [planned when an independent local app exists]
+│   └── tests/                                    [planned only for genuinely cross-module edge tests]
+├── cloud/                                        [landed]
+│   ├── apps/gumi/                                [landed: local Astrale domain slice]
+│   ├── apps/media-ingest/                        [landed: contract/core/HTTP candidate]
+│   ├── apps/media-processing/                    [landed: contract/core candidate]
+│   ├── apps/realtime-gateway/                    [planned]
+│   ├── packages/ and platform/                   [planned after demonstrated reuse]
+│   └── tests/                                    [planned for cross-app acceptance]
+└── docs/                                         [landed: system-wide material only]
 ```
 
 Only `devices`, `edge`, and `cloud` are product source roots. Repository metadata such as `docs`, CI,
@@ -57,6 +52,11 @@ tests belong to one of the three substrates.
 
 Do not create the full tree as placeholders. Each directory appears with an owner, build target, test,
 or executable artifact.
+
+For the current M1 boundary, `cloud/apps/gumi` is one Astrale domain with internal fleet, capture,
+conversation, and assistant contexts. Only fleet/capture exist today. Splitting those contexts into
+separate domains before independent authority or release boundaries emerge would add distributed
+coordination without improving ownership.
 
 ## Why the shell lives under edge
 
@@ -127,7 +127,9 @@ Prefer established formats and generators:
 - OpenAPI 3.1 for request/response APIs and generated clients;
 - MCU Manager/SMP and MCUboot manifests for stock-compatible Omi OTA;
 - Opus for M1 audio;
-- SQLite WAL semantics behind the edge persistence port, if the storage spike passes;
+- SQLite WAL semantics behind the edge persistence port; the current Android candidate encrypts one
+  strict metadata snapshot before SQLite and remains target-qualification evidence, not a universal
+  database choice;
 - OpenTelemetry/OTLP for telemetry; and
 - golden binary fixtures for device formats without a suitable standard schema.
 
@@ -164,22 +166,26 @@ edge/runtime ──calls through a port─────────────�
 - Astrale-backed apps store semantic state and opaque media references, never BLE packet state or raw
   audio chunks.
 
-For the landed Kotlin modules these rules are enforced by `./gumiw verifyArchitecture`. The check has a
-negative probe: an intentionally introduced Omi import in `edge/runtime` is rejected. Extend the rule
-set whenever a new platform, cloud, or device module lands; compilation boundaries alone do not detect
-every architectural leak.
+For the landed Kotlin modules these rules are enforced by `./gumiw verifyArchitecture`. The check
+rejects forbidden Kotlin imports and forbidden Gradle project-dependency edges. Extend the rule set
+and its negative probes whenever a new platform, cloud, or device module lands. Cloud applications
+additionally own app-local boundary tests because they are not Gradle projects.
 
 ## Test ownership
 
 Tests live with the narrowest owner capable of diagnosing a failure:
 
-- protocol vectors and firmware/driver compatibility under `devices/<device>/tests`;
-- physical qualification under `devices/<device>/tests/hardware-in-loop`;
-- portable runtime and platform contract suites under `edge/tests`;
-- app-local tests inside each `cloud/apps/<app>`;
-- cloud cross-app acceptance under `cloud/tests`; and
-- the M1 physical-to-cloud scenario under the initiating `edge/shell` acceptance suite, referencing the
-  device and cloud fixtures rather than copying them.
+- device protocol fixtures under `devices/<device>/protocols`, driver/simulator tests in those modules,
+  and physical Omi/phone qualification under `devices/<device>/tests/hardware-in-loop`;
+- portable runtime, adapter, platform, and shell tests beside their owning modules (`edge/runtime/src`,
+  `edge/adapters/.../src`, `edge/platforms/.../src`, and `edge/shell/.../src`), which is the current
+  layout; `edge/tests` is reserved for a future test that genuinely spans several edge modules;
+- app-local contract, core, and HTTP tests inside each `cloud/apps/<app>`; and
+- future cross-application cloud acceptance under `cloud/tests` only after such a suite exists.
+
+The current guarded physical harness is Android/Omi-specific and therefore remains in the Omi capsule.
+A later complete physical-to-cloud acceptance orchestrator belongs with the composition that initiates
+that run and references publisher fixtures; no such suite is claimed today.
 
 There is no root `tests/` grab bag.
 

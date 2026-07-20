@@ -1,0 +1,289 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Gumi media processing API",
+    "version": "1.0.0-candidate",
+    "description": "Provider-neutral batch media processing contract. Control callers create digest-bound jobs; narrowly authenticated workers lease attempts; provider adapters submit bounded completion facts; control callers resolve immutable digest-bound result projections. Transcript text and raw provider payloads are never control messages."
+  },
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "paths": {
+    "/v1/processing-jobs": {
+      "post": {
+        "operationId": "createProcessingJob",
+        "summary": "Idempotently create one digest-bound processing job",
+        "security": [{ "controlBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateJobRequest" } }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The request committed a new job.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/JobCreatedResponse" } } }
+          },
+          "200": {
+            "description": "The exact request was already durably bound to this job.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/JobCreatedResponse" } } }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/processing-jobs/{processingJobId}": {
+      "get": {
+        "operationId": "getProcessingJob",
+        "summary": "Read caller-scoped processing state",
+        "security": [{ "controlBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ProcessingJobId" }],
+        "responses": {
+          "200": {
+            "description": "Current processing state. An expired active lease is projected as outcome-unknown.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/JobStatus" } } }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/processing-jobs/{processingJobId}:retry": {
+      "post": {
+        "operationId": "retryProcessingJob",
+        "summary": "Explicitly queue another bounded attempt",
+        "description": "If the prior lease expired without a committed callback, acknowledgeOutcomeUnknown must be true because a fresh attempt may duplicate an external provider effect.",
+        "security": [{ "controlBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ProcessingJobId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RetryJobRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "The job is queued for its next generation.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RetryJobResponse" } } }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/processing-jobs/{processingJobId}:cancel": {
+      "post": {
+        "operationId": "cancelProcessingJob",
+        "summary": "Stop future processing work",
+        "description": "Cancellation is not deletion. If an attempt was in flight, providerOutcomeUnknown remains true and later callbacks cannot mutate the canceled job.",
+        "security": [{ "controlBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ProcessingJobId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CancelJobRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Cancellation committed.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CancelJobResponse" } } }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/processing-jobs/{processingJobId}/attempts:claim": {
+      "post": {
+        "operationId": "claimProcessingAttempt",
+        "summary": "Atomically lease a queued job to the authenticated worker",
+        "security": [{ "workerBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ProcessingJobId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ClaimAttemptRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "A bounded worker lease and immutable processing input.",
+            "headers": { "Cache-Control": { "schema": { "type": "string", "const": "private, no-store" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AttemptLease" } } }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/processing-jobs/{processingJobId}/attempts/{attemptId}:renew": {
+      "post": {
+        "operationId": "renewProcessingLease",
+        "summary": "Idempotently renew the authenticated worker's live lease",
+        "security": [{ "workerBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ProcessingJobId" },
+          { "$ref": "#/components/parameters/AttemptId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RenewLeaseRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "The lease revision and deadline advanced.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LeaseRenewedResponse" } } }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/provider-callbacks/{attemptId}:complete": {
+      "post": {
+        "operationId": "completeProcessingAttempt",
+        "summary": "Commit bounded result or failure facts for one pre-existing attempt",
+        "description": "The HTTP/provider adapter authenticates and binds provider, job, and attempt before invoking the core. It stages transcript bytes behind the artifact port and passes only the app-owned staged handle plus bounded facts. Late, foreign, canceled, and superseded callbacks are rejected.",
+        "security": [{ "providerCallbackBearer": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/AttemptId" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompleteAttemptRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "The callback converged to its immutable attempt outcome.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AttemptCompletedResponse" } } }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/processing-results/{processingJobId}": {
+      "get": {
+        "operationId": "resolveProcessingResult",
+        "summary": "Resolve an immutable result only when both input and output digests match",
+        "security": [{ "controlBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ProcessingJobId" },
+          {
+            "name": "expectedInputContentDigest",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "./schemas/common.schema.json#/$defs/Sha256Digest" }
+          },
+          {
+            "name": "expectedOutputContentDigest",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "./schemas/common.schema.json#/$defs/Sha256Digest" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Digest-bound artifact and provenance projection without transcript text.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/DerivedArtifactProjection" } }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/processing-results/{processingJobId}/transcript-pages/{startIndex}": {
+      "get": {
+        "operationId": "readTranscriptPage",
+        "summary": "Read one bounded page of immutable transcript segments",
+        "description": "The control caller must own the job and bind both immutable input and output digests. Page size is fixed by the service at most four ordered segments so even maximally escaped v1 text remains inside the default 1 MiB response envelope; transcript text remains untrusted data.",
+        "security": [{ "controlBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ProcessingJobId" },
+          { "$ref": "#/components/parameters/TranscriptStartIndex" },
+          {
+            "name": "expectedInputContentDigest",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "./schemas/common.schema.json#/$defs/Sha256Digest" }
+          },
+          {
+            "name": "expectedOutputContentDigest",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "./schemas/common.schema.json#/$defs/Sha256Digest" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One exact half-open transcript segment page, with a continuation index only when more segments remain.",
+            "headers": { "Cache-Control": { "schema": { "type": "string", "const": "private, no-store" } } },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/TranscriptPage" } }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "controlBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "opaque media-processing control token",
+        "description": "Caller-scoped control credential. A production adapter derives the actual caller and never trusts a caller ID in a request body."
+      },
+      "workerBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "opaque media-processing worker token",
+        "description": "Worker identity accepted only by claim and lease endpoints. The trusted adapter also derives its bounded pipeline allowlist. It is not graph or provider authority."
+      },
+      "providerCallbackBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "provider-adapter callback binding",
+        "description": "Authenticates one configured provider adapter and binds one existing processing job and attempt."
+      }
+    },
+    "parameters": {
+      "ProcessingJobId": {
+        "name": "processingJobId",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/UuidV7" }
+      },
+      "AttemptId": {
+        "name": "attemptId",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/UuidV7" }
+      },
+      "TranscriptStartIndex": {
+        "name": "startIndex",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "allOf": [
+            { "$ref": "./schemas/common.schema.json#/$defs/U64" },
+            { "pattern": "^(?:0|[1-9][0-9]{0,4}|100000)$" }
+          ]
+        }
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Stable application problem. Responses never contain media bytes, transcript text, credentials, signed URLs, or provider response bodies.",
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      }
+    },
+    "schemas": {
+      "CreateJobRequest": { "$ref": "./schemas/job.schema.json#/$defs/CreateJobRequest" },
+      "JobCreatedResponse": { "$ref": "./schemas/job.schema.json#/$defs/JobCreatedResponse" },
+      "JobStatus": { "$ref": "./schemas/job.schema.json#/$defs/JobStatus" },
+      "RetryJobRequest": { "$ref": "./schemas/job.schema.json#/$defs/RetryJobRequest" },
+      "RetryJobResponse": { "$ref": "./schemas/job.schema.json#/$defs/RetryJobResponse" },
+      "CancelJobRequest": { "$ref": "./schemas/job.schema.json#/$defs/CancelJobRequest" },
+      "CancelJobResponse": { "$ref": "./schemas/job.schema.json#/$defs/CancelJobResponse" },
+      "ClaimAttemptRequest": { "$ref": "./schemas/attempt.schema.json#/$defs/ClaimAttemptRequest" },
+      "AttemptLease": { "$ref": "./schemas/attempt.schema.json#/$defs/AttemptLease" },
+      "RenewLeaseRequest": { "$ref": "./schemas/attempt.schema.json#/$defs/RenewLeaseRequest" },
+      "LeaseRenewedResponse": { "$ref": "./schemas/attempt.schema.json#/$defs/LeaseRenewedResponse" },
+      "CompleteAttemptRequest": { "$ref": "./schemas/attempt.schema.json#/$defs/CompleteAttemptRequest" },
+      "AttemptCompletedResponse": { "$ref": "./schemas/attempt.schema.json#/$defs/AttemptCompletedResponse" },
+      "DerivedArtifactProjection": { "$ref": "./schemas/result.schema.json#/$defs/DerivedArtifactProjection" },
+      "TranscriptPage": { "$ref": "./schemas/transcript-page.schema.json#/$defs/TranscriptPage" },
+      "Problem": { "$ref": "./schemas/problem.schema.json#/$defs/Problem" }
+    }
+  },
+  "x-gumi-contract-version": "gumi.media-processing.v1"
+}

@@ -42,9 +42,32 @@ class OmiCv1FirmwareOracleTest {
     }
 
     @Test
-    fun `reports incomplete state when the active network image is absent`() {
+    fun `reports exact application identity when the network image is unobserved`() {
         val assessment = OmiCv1StockV3012FirmwareOracle.assess(
-            inspection(activeImage(0, OmiCv1StockV3012FirmwareOracle.APPLICATION_IMAGE_HASH)),
+            inspection(
+                activeImage(
+                    0,
+                    OmiCv1StockV3012FirmwareOracle.APPLICATION_IMAGE_HASH,
+                    version = OmiCv1StockV3012FirmwareOracle.MCUMGR_WIRE_VERSION,
+                ),
+            ),
+        )
+
+        assertEquals(
+            OmiCv1FirmwareOracleStatus.APPLICATION_MATCH_NETWORK_UNOBSERVED,
+            assessment.status,
+        )
+        assertEquals(
+            listOf(OmiCv1FirmwareFindingCode.MISSING_ACTIVE_IMAGE),
+            assessment.findings.map(OmiCv1FirmwareFinding::code),
+        )
+        assertEquals(1, assessment.findings.single().imageNumber)
+    }
+
+    @Test
+    fun `keeps a network-only observation incomplete`() {
+        val assessment = OmiCv1StockV3012FirmwareOracle.assess(
+            inspection(activeImage(1, OmiCv1StockV3012FirmwareOracle.NETWORK_IMAGE_HASH)),
         )
 
         assertEquals(OmiCv1FirmwareOracleStatus.INCOMPLETE, assessment.status)
@@ -52,7 +75,25 @@ class OmiCv1FirmwareOracleTest {
             listOf(OmiCv1FirmwareFindingCode.MISSING_ACTIVE_IMAGE),
             assessment.findings.map(OmiCv1FirmwareFinding::code),
         )
-        assertEquals(1, assessment.findings.single().imageNumber)
+        assertEquals(0, assessment.findings.single().imageNumber)
+    }
+
+    @Test
+    fun `rejects a non-equivalent application version even when its hash matches`() {
+        val assessment = OmiCv1StockV3012FirmwareOracle.assess(
+            inspection(
+                activeImage(
+                    0,
+                    OmiCv1StockV3012FirmwareOracle.APPLICATION_IMAGE_HASH,
+                    version = "0.0.1",
+                ),
+            ),
+        )
+
+        assertEquals(OmiCv1FirmwareOracleStatus.MISMATCH, assessment.status)
+        assertTrue(
+            assessment.findings.any { it.code == OmiCv1FirmwareFindingCode.VERSION_MISMATCH },
+        )
     }
 
     @Test
@@ -75,6 +116,55 @@ class OmiCv1FirmwareOracleTest {
         assertTrue(assessment.findings.any { it.code == OmiCv1FirmwareFindingCode.NOT_BOOTABLE })
     }
 
+    @Test
+    fun `recognizes exact behavior neutral canary with unobserved network`() {
+        val assessment = OmiCv1GumiCanary0001FirmwareOracle.assess(
+            inspection(
+                activeImage(
+                    0,
+                    OmiCv1GumiCanary0001FirmwareOracle.APPLICATION_IMAGE_HASH,
+                    version = OmiCv1StockV3012FirmwareOracle.MCUMGR_WIRE_VERSION,
+                ),
+            ),
+        )
+
+        assertEquals(
+            OmiCv1FirmwareOracleStatus.GUMI_CANARY_APPLICATION_MATCH_NETWORK_UNOBSERVED,
+            assessment.status,
+        )
+        assertEquals(OmiCv1GumiCanary0001FirmwareOracle.RELEASE_TAG, assessment.releaseTag)
+        assertEquals(
+            listOf(OmiCv1FirmwareFindingCode.MISSING_ACTIVE_IMAGE),
+            assessment.findings.map(OmiCv1FirmwareFinding::code),
+        )
+    }
+
+    @Test
+    fun `recognizes exact behavior neutral canary with published network image`() {
+        val assessment = OmiCv1KnownV3012FirmwareOracle.assess(
+            inspection(
+                activeImage(0, OmiCv1GumiCanary0001FirmwareOracle.APPLICATION_IMAGE_HASH),
+                activeImage(1, OmiCv1StockV3012FirmwareOracle.NETWORK_IMAGE_HASH),
+            ),
+        )
+
+        assertEquals(OmiCv1FirmwareOracleStatus.MATCHES_GUMI_CANARY_0001, assessment.status)
+        assertTrue(assessment.findings.isEmpty())
+    }
+
+    @Test
+    fun `canary oracle rejects stock application bytes`() {
+        val assessment = OmiCv1GumiCanary0001FirmwareOracle.assess(
+            inspection(activeImage(0, OmiCv1StockV3012FirmwareOracle.APPLICATION_IMAGE_HASH)),
+        )
+
+        assertEquals(OmiCv1FirmwareOracleStatus.MISMATCH, assessment.status)
+        assertEquals(
+            OmiCv1GumiCanary0001FirmwareOracle.APPLICATION_IMAGE_HASH,
+            assessment.findings.single().expected,
+        )
+    }
+
     private fun inspection(vararg slots: FirmwareImageSlot) = FirmwareImageStateInspection(
         endpoint = EndpointCandidate(TransportKind.BLE, "ephemeral"),
         protocol = "mcumgr-smp",
@@ -82,10 +172,14 @@ class OmiCv1FirmwareOracleTest {
         splitStatus = 0,
     )
 
-    private fun activeImage(imageNumber: Int, hash: String) = FirmwareImageSlot(
+    private fun activeImage(
+        imageNumber: Int,
+        hash: String,
+        version: String = OmiCv1StockV3012FirmwareOracle.MCUBOOT_VERSION,
+    ) = FirmwareImageSlot(
         imageNumber = imageNumber,
         slotNumber = 0,
-        version = OmiCv1StockV3012FirmwareOracle.MCUBOOT_VERSION,
+        version = version,
         hash = FirmwareImageHash(hash),
         bootable = true,
         pending = false,

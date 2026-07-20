@@ -1,0 +1,519 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Gumi Media Ingest API",
+    "version": "1.0.0",
+    "description": "Publisher-owned control and byte-plane contract for capture-scoped, resumable, integrity-checked media ingest. A successful chunk response is an exact durable acknowledgement."
+  },
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "servers": [
+    {
+      "url": "/",
+      "description": "Deployment-relative; the provider and region are intentionally not selected by this contract."
+    }
+  ],
+  "tags": [
+    {
+      "name": "control",
+      "description": "Astrale-authorized session creation. Never callable with an ingest bearer."
+    },
+    {
+      "name": "data",
+      "description": "Capture-scoped byte transfer, resume status, and immutable finalization."
+    }
+  ],
+  "paths": {
+    "/v1/ingest-sessions": {
+      "post": {
+        "operationId": "createIngestSession",
+        "summary": "Create an authorized capture-scoped ingest session",
+        "description": "The caller is the Gumi semantic application acting after its own caller authorization. requestId is the idempotency identity: an identical retry returns the same session; contradictory reuse returns 409. Session lifetime, credential lifetime, and retained-byte lifetime are distinct.",
+        "tags": ["control"],
+        "security": [{ "controlBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/CorrelationId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./schemas/session.schema.json#/$defs/CreateIngestSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "A new capture-scoped session was durably created.",
+            "headers": {
+              "Cache-Control": { "$ref": "#/components/headers/NoStore" },
+              "X-Request-ID": { "$ref": "#/components/headers/RequestId" },
+              "X-Correlation-ID": { "$ref": "#/components/headers/CorrelationId" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./schemas/session.schema.json#/$defs/CreateIngestSessionResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Idempotent replay of an identical session-creation request.",
+            "headers": {
+              "Cache-Control": { "$ref": "#/components/headers/NoStore" },
+              "X-Request-ID": { "$ref": "#/components/headers/RequestId" },
+              "X-Correlation-ID": { "$ref": "#/components/headers/CorrelationId" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./schemas/session.schema.json#/$defs/CreateIngestSessionResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/UnauthorizedProblem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "409": { "$ref": "#/components/responses/Problem" },
+          "413": { "$ref": "#/components/responses/Problem" },
+          "429": { "$ref": "#/components/responses/RateLimitedProblem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/ingest-sessions/{ingestSessionId}/credentials": {
+      "post": {
+        "operationId": "refreshIngestCredential",
+        "summary": "Issue another short-lived credential for an existing resumable session",
+        "description": "The control caller must re-authorize the capture, device, and edge host. Refresh changes no chunk, range, manifest, or session identity. A response retry may issue another concurrently valid bearer bound to the same session; it MUST NOT revoke a successfully returned bearer early.",
+        "tags": ["control"],
+        "security": [{ "controlBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/IngestSessionId" },
+          { "$ref": "#/components/parameters/CorrelationId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./schemas/session.schema.json#/$defs/RefreshIngestCredentialRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A newly issued bearer whose expiry does not exceed the session expiry.",
+            "headers": {
+              "Cache-Control": { "$ref": "#/components/headers/NoStore" },
+              "X-Request-ID": { "$ref": "#/components/headers/RequestId" },
+              "X-Correlation-ID": { "$ref": "#/components/headers/CorrelationId" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./schemas/session.schema.json#/$defs/RefreshIngestCredentialResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/UnauthorizedProblem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "409": { "$ref": "#/components/responses/Problem" },
+          "413": { "$ref": "#/components/responses/Problem" },
+          "429": { "$ref": "#/components/responses/RateLimitedProblem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/manifests/{manifestId}": {
+      "get": {
+        "operationId": "getImmutableManifestProjection",
+        "summary": "Resolve one digest-bound immutable manifest for semantic finalization",
+        "description": "This read-only control operation returns the narrow publisher-owned projection consumed by gumi.astrale.ai, including the immutable primary object's digest, byte length, and content type. The expected manifest digest is mandatory: a lookup never silently accepts a different durable manifest.",
+        "tags": ["control"],
+        "security": [{ "controlBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ManifestId" },
+          { "$ref": "#/components/parameters/ExpectedManifestDigest" },
+          { "$ref": "#/components/parameters/CorrelationId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "The immutable manifest exists and its canonical digest exactly matches the caller's expectation.",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": { "type": "string", "const": "private, no-store" }
+              },
+              "X-Request-ID": { "$ref": "#/components/headers/RequestId" },
+              "X-Correlation-ID": { "$ref": "#/components/headers/CorrelationId" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./schemas/manifest.schema.json#/$defs/ImmutableManifestProjection"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/UnauthorizedProblem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "409": { "$ref": "#/components/responses/Problem" },
+          "429": { "$ref": "#/components/responses/RateLimitedProblem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/ingest-sessions/{ingestSessionId}/status": {
+      "get": {
+        "operationId": "getIngestStatus",
+        "summary": "Read exact durable resume state",
+        "tags": ["data"],
+        "security": [{ "ingestBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/IngestSessionId" },
+          { "$ref": "#/components/parameters/CorrelationId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Canonical merged committed ranges and exact gaps for every scoped stream.",
+            "headers": {
+              "X-Request-ID": { "$ref": "#/components/headers/RequestId" },
+              "X-Correlation-ID": { "$ref": "#/components/headers/CorrelationId" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./schemas/session.schema.json#/$defs/IngestStatus"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/UnauthorizedProblem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "429": { "$ref": "#/components/responses/RateLimitedProblem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/ingest-sessions/{ingestSessionId}/streams/{streamId}/chunks/{chunkId}": {
+      "put": {
+        "operationId": "putMediaChunk",
+        "summary": "Durably store or idempotently acknowledge one sequenced chunk",
+        "description": "The server hashes the exact request bytes before durable acknowledgement. Under gumi.ogg-opus.single-packet-page.v1, a chunk batches a bounded contiguous sequence range whose N audio pages each contain one packet and independently prove the scoped serial, derived page sequence and granule, and exact BOS/EOS placement. Deterministic final assembly is byte concatenation in sequence order with no remux or transcoding. Sparse and out-of-order chunks may be stored, but range/page-count mismatches, overlaps, contradictory terminal ordering, and contradictory duplicate identities fail explicitly. The canonical descriptor digest binds every metadata header.",
+        "tags": ["data"],
+        "security": [{ "ingestBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/IngestSessionId" },
+          { "$ref": "#/components/parameters/StreamId" },
+          { "$ref": "#/components/parameters/ChunkId" },
+          { "$ref": "#/components/parameters/SequenceFirst" },
+          { "$ref": "#/components/parameters/SequenceLast" },
+          { "$ref": "#/components/parameters/PayloadBytes" },
+          { "$ref": "#/components/parameters/PayloadFormat" },
+          { "$ref": "#/components/parameters/ContentDigest" },
+          { "$ref": "#/components/parameters/CodecConfigurationId" },
+          { "$ref": "#/components/parameters/SourceStartedAt" },
+          { "$ref": "#/components/parameters/EdgeReceivedAt" },
+          { "$ref": "#/components/parameters/SourceRetransmission" },
+          { "$ref": "#/components/parameters/DiscontinuityReason" },
+          { "$ref": "#/components/parameters/DroppedFrameCount" },
+          { "$ref": "#/components/parameters/CorrelationId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The exact bytes are durable. disposition distinguishes first storage from an identical replay.",
+            "headers": {
+              "X-Request-ID": { "$ref": "#/components/headers/RequestId" },
+              "X-Correlation-ID": { "$ref": "#/components/headers/CorrelationId" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./schemas/chunk.schema.json#/$defs/DurableAck"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/UnauthorizedProblem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "409": { "$ref": "#/components/responses/Problem" },
+          "413": { "$ref": "#/components/responses/Problem" },
+          "422": { "$ref": "#/components/responses/Problem" },
+          "429": { "$ref": "#/components/responses/RateLimitedProblem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/v1/ingest-sessions/{ingestSessionId}/finalize": {
+      "post": {
+        "operationId": "finalizeIngestSession",
+        "summary": "Finalize complete durable ranges into an immutable manifest",
+        "description": "Finalization requires the exact stream set declared at session creation. Every expected range starts at its policy first, ends at or after every durable sequence, and contains no gap. The final object is the byte-for-byte concatenation of chunk bodies in range order; expectedByteLength is their sum and expectedContentDigest hashes those exact bytes. The first success commits the immutable object and manifest; identical retries return the same manifest and digest.",
+        "tags": ["data"],
+        "security": [{ "ingestBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/IngestSessionId" },
+          { "$ref": "#/components/parameters/CorrelationId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./schemas/manifest.schema.json#/$defs/FinalizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Immutable finalization or an idempotent replay of the same finalization.",
+            "headers": {
+              "X-Request-ID": { "$ref": "#/components/headers/RequestId" },
+              "X-Correlation-ID": { "$ref": "#/components/headers/CorrelationId" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./schemas/manifest.schema.json#/$defs/FinalizationResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/UnauthorizedProblem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "409": { "$ref": "#/components/responses/Problem" },
+          "413": { "$ref": "#/components/responses/Problem" },
+          "422": { "$ref": "#/components/responses/Problem" },
+          "429": { "$ref": "#/components/responses/RateLimitedProblem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "headers": {
+      "NoStore": {
+        "required": true,
+        "schema": { "type": "string", "const": "private, no-store" }
+      },
+      "RequestId": {
+        "required": true,
+        "description": "Server-generated UUIDv7 identifying this HTTP attempt and matching Problem.traceId on failures.",
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/UuidV7" }
+      },
+      "CorrelationId": {
+        "required": false,
+        "description": "Exact echo of a valid caller-supplied X-Correlation-ID. Absent when the caller omitted it.",
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/UuidV7" }
+      }
+    },
+    "securitySchemes": {
+      "controlBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Astrale service credential",
+        "description": "Authenticates only the configured Gumi semantic-application principal for the exact media-ingest audience."
+      },
+      "ingestBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "opaque capture-scoped token",
+        "description": "Short-lived credential for the exact media-ingest audience, bound to one edge-host principal, ingest session, device, capture, stream set, and sequence policies."
+      }
+    },
+    "parameters": {
+      "CorrelationId": {
+        "name": "X-Correlation-ID",
+        "in": "header",
+        "required": false,
+        "description": "Optional caller UUIDv7 used to correlate attempts across trusted services. It is not an idempotency key; body requestId and chunk identity own replay semantics.",
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/UuidV7" }
+      },
+      "IngestSessionId": {
+        "name": "ingestSessionId",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/UuidV7" }
+      },
+      "StreamId": {
+        "name": "streamId",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/UuidV7" }
+      },
+      "ChunkId": {
+        "name": "chunkId",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/UuidV7" }
+      },
+      "ManifestId": {
+        "name": "manifestId",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/UuidV7" }
+      },
+      "ExpectedManifestDigest": {
+        "name": "Gumi-Expected-Manifest-Digest",
+        "in": "header",
+        "required": true,
+        "description": "Canonical MediaManifest digest previously returned by finalization. A mismatch returns MANIFEST_DIGEST_CONFLICT.",
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/Sha256Digest" }
+      },
+      "SequenceFirst": {
+        "name": "Gumi-Sequence-First",
+        "in": "header",
+        "required": true,
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/U64" }
+      },
+      "SequenceLast": {
+        "name": "Gumi-Sequence-Last",
+        "in": "header",
+        "required": true,
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/U64" }
+      },
+      "PayloadBytes": {
+        "name": "Gumi-Payload-Bytes",
+        "in": "header",
+        "required": true,
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/PositiveU64" }
+      },
+      "PayloadFormat": {
+        "name": "Gumi-Payload-Format",
+        "in": "header",
+        "required": true,
+        "description": "M1 body framing and deterministic assembly profile.",
+        "schema": { "type": "string", "const": "ogg-opus-page-fragment-v1" }
+      },
+      "ContentDigest": {
+        "name": "Content-Digest",
+        "in": "header",
+        "required": true,
+        "description": "RFC 9530 digest of the exact application/octet-stream body. V1 requires exactly one sha-256 member; the canonical ChunkDescriptor normalizes its bytes to lowercase sha256:<hex>.",
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/ContentDigestHeader" }
+      },
+      "CodecConfigurationId": {
+        "name": "Gumi-Codec-Configuration-Id",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "$ref": "./schemas/common.schema.json#/$defs/CodecConfigurationId"
+        }
+      },
+      "SourceStartedAt": {
+        "name": "Gumi-Source-Started-At",
+        "in": "header",
+        "required": true,
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/Timestamp" }
+      },
+      "EdgeReceivedAt": {
+        "name": "Gumi-Edge-Received-At",
+        "in": "header",
+        "required": false,
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/Timestamp" }
+      },
+      "SourceRetransmission": {
+        "name": "Gumi-Source-Retransmission",
+        "in": "header",
+        "required": true,
+        "description": "Source/device retransmission evidence, not an HTTP-attempt flag. Preserve it across an identical HTTP retry.",
+        "schema": { "type": "boolean" }
+      },
+      "DiscontinuityReason": {
+        "name": "Gumi-Discontinuity-Reason",
+        "in": "header",
+        "required": false,
+        "description": "If present, declares physical-source loss immediately before this range. Gumi-Dropped-Frame-Count is then required.",
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/DiscontinuityReason" }
+      },
+      "DroppedFrameCount": {
+        "name": "Gumi-Dropped-Frame-Count",
+        "in": "header",
+        "required": false,
+        "description": "Required exactly when Gumi-Discontinuity-Reason is present; omitted otherwise.",
+        "schema": { "$ref": "./schemas/common.schema.json#/$defs/U64" }
+      }
+    },
+    "responses": {
+      "UnauthorizedProblem": {
+        "description": "Authentication failed. No durable acknowledgement is implied.",
+        "headers": {
+          "X-Request-ID": { "$ref": "#/components/headers/RequestId" },
+          "X-Correlation-ID": { "$ref": "#/components/headers/CorrelationId" },
+          "WWW-Authenticate": {
+            "required": true,
+            "schema": { "type": "string", "minLength": 1 }
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "./schemas/problem.schema.json#/$defs/Problem"
+            }
+          }
+        }
+      },
+      "RateLimitedProblem": {
+        "description": "The scoped caller is rate limited. Retry only after the declared delay.",
+        "headers": {
+          "X-Request-ID": { "$ref": "#/components/headers/RequestId" },
+          "X-Correlation-ID": { "$ref": "#/components/headers/CorrelationId" },
+          "Retry-After": {
+            "required": true,
+            "schema": { "type": "integer", "minimum": 0, "maximum": 86400 }
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "./schemas/problem.schema.json#/$defs/RateLimitedProblem"
+            }
+          }
+        }
+      },
+      "Problem": {
+        "description": "Stable machine-readable failure. No durable acknowledgement is implied.",
+        "headers": {
+          "X-Request-ID": { "$ref": "#/components/headers/RequestId" },
+          "X-Correlation-ID": { "$ref": "#/components/headers/CorrelationId" }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "./schemas/problem.schema.json#/$defs/Problem"
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-gumi-contract-version": "gumi.media-ingest.v1"
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "../../catalog/application-manifest.schema.json",
+  "schemaVersion": 1,
+  "appId": "media-ingest",
+  "kind": "http-service",
+  "owner": "gumi-media-data",
+  "summary": "Owns capture-scoped resumable byte acceptance, immutable media assembly, and manifest publication.",
+  "durableAuthority": [
+    "Ingest session, chunk, committed sequence range, immutable object, and manifest truth",
+    "Capture-scoped upload credential issuance and exact durable acknowledgement"
+  ],
+  "dataClasses": ["raw-media", "operational-metadata"],
+  "tenancy": {
+    "mode": "dedicated-deployment",
+    "sharedDeployment": false,
+    "scopeSource": "deployment-binding"
+  },
+  "contracts": [
+    {
+      "id": "media-ingest-v1",
+      "protocol": "http-openapi",
+      "version": "v1",
+      "path": "api/v1/openapi.json"
+    }
+  ],
+  "dependencies": [],
+  "deployment": {
+    "status": "local-only",
+    "target": null,
+    "regions": []
+  },
+  "retention": {
+    "status": "unselected",
+    "class": "sensitive-user-content",
+    "policyId": null
+  },
+  "runbook": "README.md"
+}

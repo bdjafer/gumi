@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "gumi.media-ingest.ack.v1",
+  "ingestSessionId": "0190c6f0-7b21-7a40-8b11-000000000002",
+  "streamId": "0190c6f0-7b21-7a40-8b11-000000000006",
+  "acknowledgedChunkId": "0190c6f0-7b21-7a40-8b11-000000000007",
+  "acknowledgedContentDigest": "sha256:d857c547c6ffb1d8f9963a2c6ead0420501a3519b5b6f8acf51434e479adcb83",
+  "acknowledgedDescriptorDigest": "sha256:2e50c90ba004d1238eea28832e39478a2fff6112d7b8ef9c101ff888349ba56f",
+  "acknowledgedSequenceRange": { "first": "0", "last": "1" },
+  "disposition": "stored",
+  "committedRanges": [{ "first": "0", "last": "1" }],
+  "missingRanges": [],
+  "accountedRange": { "first": "0", "last": "1" },
+  "durableThrough": "1",
+  "stateRevision": "1",
+  "sessionState": "open",
+  "acknowledgedAt": "2026-07-19T20:00:02Z"
+}

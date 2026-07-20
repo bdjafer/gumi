@@ -17,6 +17,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0-dev"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
@@ -27,11 +28,17 @@ android {
     buildFeatures {
         compose = true
     }
+
+    lint {
+        // API 36 is an explicit qualification boundary; see docs/development/bootstrap.md.
+        disable += "OldTargetApi"
+    }
 }
 
 dependencies {
     implementation(project(":edge:runtime"))
     implementation(project(":edge:platforms:android"))
+    implementation(project(":edge:shell:application"))
     implementation(project(":devices:omi-cv1:edge-driver"))
     implementation(libs.kotlinx.coroutines.android)
 
@@ -41,4 +48,15 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    testImplementation(kotlin("test-junit"))
+    testImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    //noinspection UseTomlInstead -- Android-only test dependency; keep this task inside this module.
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    //noinspection UseTomlInstead -- Android-only test host; keep this task inside this module.
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

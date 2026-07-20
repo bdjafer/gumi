@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gumi.astrale.ai/schemas/media-processing/v1/result.schema.json",
+  "title": "Gumi immutable derived artifact projection",
+  "$defs": {
+    "DerivedArtifactProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "processingJobId",
+        "artifactId",
+        "artifactHandle",
+        "input",
+        "output",
+        "provenance",
+        "committedAt"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.derived-artifact-projection.v1" },
+        "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "artifactId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "artifactHandle": {
+          "$ref": "common.schema.json#/$defs/OpaqueId",
+          "description": "Stable media-processing handle resolved through an authorized adapter. It is not a provider URI, storage key, signed URL, or credential."
+        },
+        "input": { "$ref": "common.schema.json#/$defs/DigestBoundInput" },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["contentDigest", "byteLength", "contentType"],
+          "properties": {
+            "contentDigest": { "$ref": "common.schema.json#/$defs/Sha256Digest" },
+            "byteLength": { "$ref": "common.schema.json#/$defs/DerivedArtifactByteLength" },
+            "contentType": { "const": "application/vnd.gumi.transcript+json" }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "pipelineId",
+            "configurationDigest",
+            "providerId",
+            "model",
+            "modelVersion",
+            "attemptId",
+            "generation",
+            "language",
+            "timing",
+            "segments"
+          ],
+          "properties": {
+            "pipelineId": { "$ref": "common.schema.json#/$defs/StableSlug" },
+            "configurationDigest": { "$ref": "common.schema.json#/$defs/Sha256Digest" },
+            "providerId": { "$ref": "common.schema.json#/$defs/StableSlug" },
+            "model": { "type": "string", "minLength": 1, "maxLength": 160 },
+            "modelVersion": { "type": "string", "minLength": 1, "maxLength": 160 },
+            "attemptId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "generation": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+            "language": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["tag", "basis"],
+              "properties": {
+                "tag": { "$ref": "common.schema.json#/$defs/LanguageTag" },
+                "basis": { "enum": ["requested", "detected", "provider-default"] }
+              }
+            },
+            "timing": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["providerStartedAt", "providerCompletedAt", "mediaDurationMs"],
+              "properties": {
+                "providerStartedAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+                "providerCompletedAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+                "mediaDurationMs": { "$ref": "common.schema.json#/$defs/PositiveU64" }
+              }
+            },
+            "segments": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["count", "timedCount"],
+              "properties": {
+                "count": { "$ref": "common.schema.json#/$defs/U64" },
+                "timedCount": { "$ref": "common.schema.json#/$defs/U64" },
+                "firstStartMs": { "$ref": "common.schema.json#/$defs/U64" },
+                "lastEndMs": { "$ref": "common.schema.json#/$defs/U64" }
+              }
+            }
+          }
+        },
+        "committedAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+      },
+      "description": "A digest-bound, read-only control projection. It deliberately excludes transcript text and cannot directly authorize graph mutation, policy, prompts, tools, or actions."
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "gumi.media-ingest.status.v1",
+  "ingestSessionId": "0190c6f0-7b21-7a40-8b11-000000000002",
+  "captureSessionId": "0190c6f0-7b21-7a40-8b11-000000000003",
+  "state": "open",
+  "stateRevision": "3",
+  "sessionExpiresAt": "2026-07-19T21:00:00Z",
+  "retainedUntil": "2026-07-26T21:00:00Z",
+  "streams": [
+    {
+      "streamId": "0190c6f0-7b21-7a40-8b11-000000000006",
+      "sequencePolicy": { "first": "0", "maximumLast": "999999" },
+      "codec": {
+        "name": "opus",
+        "configurationId": "opus-16000-mono-20ms-v1",
+        "sampleRateHz": 16000,
+        "channelCount": 1,
+        "frameDurationUs": 20000
+      },
+      "oggLayout": {
+        "profile": "gumi.ogg-opus.single-packet-page.v1",
+        "serialNumber": "3548421033",
+        "preSkip48kSamples": "312"
+      },
+      "accountedRange": { "first": "0", "last": "5" },
+      "committedRanges": [
+        { "first": "0", "last": "1" },
+        { "first": "4", "last": "5" }
+      ],
+      "missingRanges": [{ "first": "2", "last": "3" }],
+      "durableThrough": "1",
+      "terminalSequence": "5",
+      "storedChunkCount": "2",
+      "storedBytes": "241"
+    }
+  ],
+  "manifestId": null,
+  "updatedAt": "2026-07-19T20:00:04Z"
+}

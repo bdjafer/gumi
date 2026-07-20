@@ -64,20 +64,34 @@ one enum because the device can sync while recording.
 ### Capture state
 
 ```text
-Idle --double tap--> Recording --double tap--> Idle
-Idle --hold-------> VoiceTurn --release------> Idle
-Recording --hold--> VoiceTurn --release------> Recording
-any capture state --fatal capture error------> Idle + Fault report
+BaseRecording: Idle --double tap--> Recording --double tap--> Idle
+VoiceTurn:      Inactive --hold--> Active --release--> Inactive
+
+Idle + VoiceTurn Active ---------> Idle on release
+Recording + VoiceTurn Active ----> the same Recording on release
+any acquired state --fatal capture error--> microphone release + Fault report
 ```
 
 - `Idle`: PDM capture and encoding are stopped. Acoustic AAD is separately reported if enabled.
 - `Recording`: audio is framed for live delivery and committed to the local device ring as configured.
-- `VoiceTurn`: low-latency audio is prioritized for the realtime route and is still recoverable locally.
+- `VoiceTurn`: low-latency audio is prioritized for the realtime route, remains recoverable locally, and
+  overlays rather than replaces a Recording that was already active.
 - Entering/leaving a state is acknowledged only after hardware acquisition/release succeeds.
 
-The existing three-second power-off hold conflicts with hold-to-talk. M1 reserves hold for VoiceTurn.
-Normal power-off moves to an authenticated control command; a separate emergency gesture/reset policy is
-an unresolved hardware/product decision and must not share an ambiguous threshold with speech.
+Stock behavior is version-dependent: official v3.0.12 source assigns a single tap to shutdown and uses a
+one-second long press as a notification, while candidate v3.0.20 source assigns a three-second hold to
+shutdown. Neither mapping is the Gumi contract. M1 reserves Normal-mode hold for VoiceTurn and moves
+normal power-off to an authenticated control workflow. A separate emergency gesture/reset policy is an
+unresolved hardware/product decision and must not share an ambiguous threshold with speech. Exact
+proposed timing, physical outputs, arbitration, and accessibility semantics are governed by the
+[device human-I/O contract](device-human-io-contract.md).
+
+Normal wake from Off is local and charger-independent: a qualified button press cannot require pairing,
+an active link, edge/cloud reachability, or charger connection. It enters microphone-off Booting and
+never resumes capture. This is not stock behavior we can assume: the owned v3.0.12 unit was observed off,
+did not wake from owner button attempts, and recovered on charger insertion even though source intends
+the active-low button GPIO as a system-off wake source. The transition trigger, exact press, electrical
+path, and root cause remain unqualified.
 
 ### Link state
 
@@ -124,11 +138,55 @@ same edge SDK and runtime; an iOS shell is a possible later host, not an M1 comm
 M1 uses the Kotlin-first direction recorded in
 [Decision 0001](../decisions/0001-android-edge-stack.md): common SDK/runtime/driver logic targets
 Android and Linux/JVM, the Android shell is native, and maintained Nordic BLE/MCU Manager libraries sit
-behind edge ports. Exact tool and persistence versions remain gated by the bootstrap spike. Rust or
-another native core is reconsidered only from measured host/performance constraints, not speculation.
+behind edge ports. Tool versions are bootstrap-pinned; [Decision 0002](../decisions/0002-durable-spool-storage.md)
+records the locally executable Android storage candidate, and
+[Decision 0004](../decisions/0004-android-companion-association.md) governs the still-unimplemented
+Companion API 29–37 boundary. Rust or another native core is reconsidered only from measured
+host/performance constraints, not speculation.
 
 The governing module and port ownership is the
 [edge runtime and plugin contract](edge-runtime-contract.md).
+
+### Current implementation truth
+
+The portable runtime, spool/upload coordinators, host-neutral shell application, Omi simulator/driver,
+and Linux witness execute locally. Android has an unexported, non-sticky `connectedDevice` service and
+application-process `RuntimeHost` scaffold, plus a separate Keystore/encrypted-SQLite/immutable-file
+spool candidate. The edge also has a one-attempt OkHttp chunk adapter, and media ingest has a real local
+Node HTTP boundary.
+
+A separate portable operational slice now executes offline. `OperationalDeviceRuntime` acquires one
+provisioned binding, reconciled storage lease, transport lease, ephemeral endpoint, negotiated device
+session, and power observation in that order, then releases them in reverse. The Android operational
+storage adapter exposes the encrypted store through that port, and `OperationalShellBridge` publishes
+generation-fenced, per-axis-fresh link/power/storage truth while leaving capture unverified and
+rejecting capture commands. It publishes backlog counts only when the runtime marks them as durably
+device-attributed.
+
+That adapter deliberately represents one process-global M1 spool whose recovered backlog belongs to
+the edge host, not to an individual `DeviceId`. The first operational witness is constrained to one
+explicitly started device. A local scalable graph now composes one foreground lease, one spool owner,
+and a `DeviceId`-keyed runtime registry/command router; its concurrency, identity fencing, reverse
+cleanup, and process teardown execute in unit/host tests. Per-device runtimes cannot close the global
+spool, and `EDGE_HOST` backlog is zeroed and marked unavailable at the per-device shell boundary. The
+production application still has no provisioned runtime factory and does not instantiate this graph.
+
+On an API 36 ARM64 emulator, the original five storage primitive cases and the shell suite's 3/3
+Intent/framework cases pass. Two newer storage cancellation/operational-lease cases compile but have
+not run on Android. Those pieces are still not one Android product graph.
+The Activity has not composed the host-neutral shell application, real operational Omi lease, encrypted
+recovery, and cloud adapter. Companion association, durable binding/user-stop restoration,
+Motorola/OEM qualification, process-death/reboot, deployed stores, real credentials, live Astrale
+installation, and physical end-to-end behavior remain open. This section records implementation status
+only; it does not weaken the completion criteria above.
+
+The stock driver currently returns no provisioned Gumi `deviceId` and exposes no `CaptureControl` or
+capture-state observation. No operational owner yet connects live notifications to mux state, a durable
+source checkpoint, or spool advancement. The Android product graph also lacks composed recovery/event
+ingress, production binding/endpoint resolution, provisioning/cloud-auth wiring, a shell freshness
+scheduler and `INTERNET`; user-stop is not durable. Until those boundaries exist,
+the service can qualify explicit foreground ownership with capture unverified and zero audio
+subscription, but cannot qualify Recording, upload, or automatic presence recovery.
 
 ## Media transfer contract
 
@@ -153,6 +211,13 @@ Rules:
 4. The ingest service validates size, order, digest, authorization, and capture-session state.
 5. Finalization writes an immutable media manifest before announcing a Recording to Astrale.
 6. Raw chunks and high-frequency transfer counters remain outside the Astrale graph.
+
+The local HTTP candidates already exercise the exact chunk boundary: media ingest separates control and
+data credentials, streams bounded JSON/binary bodies, validates canonical routes/content/digests, and
+emits typed problem responses; the edge caps a chunk at 1 MiB before authorization/network, uses a
+dedicated no-hook/no-retry OkHttp client, and accepts only strict string-shaped exact ACKs. Production
+credential verification/revocation, databases/object storage, rate limiting, TLS ingress, retention,
+deployment, and Android composition remain required before these are data-plane evidence.
 
 Serialization over BLE remains compatible with the current firmware during the first vertical. Any new
 control encoding requires code generation or shared golden fixtures; a handwritten protocol on both
@@ -207,7 +272,8 @@ successful write using composed function authority is not evidence the caller he
 - Device ownership, proximity, button input, and a lit indicator are not substitutes for participant
   consent. Gumi starts no capture until an explicit local action and an applicable consent policy permit
   it; deployments remain responsible for the rules in their jurisdiction and context.
-- Physical indication follows actual microphone acquisition, not requested state.
+- Physical indication is firmware-owned, guards every interval in which the microphone is acquiring,
+  acquired, releasing, or not proven off, and never reflects requested state alone.
 - Idle and Recording are distinguishable without opening the mobile app.
 - Device, edge host, user, ingest session, and Astrale function are separate identities.
 - Pairing is explicit; lost devices and hosts can be revoked.
@@ -264,10 +330,11 @@ The detailed evidence and exit criteria for these gates are maintained in the
 
 | Decision | State / next evidence |
 | --- | --- |
-| Exact hardware/firmware identity | Model, hardware 5.0, firmware 3.0.12, and GATT profile observed; MCU image-state read pending |
+| Exact hardware/firmware identity | Model, hardware 5.0, firmware 3.0.12, GATT profile, and exact published application image observed; stock MCU Manager exposed no network/secondary-slot truth, so OTA identity remains partial |
 | Android/Kotlin/Gradle pins | Resolved for the current bootstrap and recorded in Decision 0001; re-open only from measured incompatibility |
 | Existing stock media disposition | Quarantined; explicit import/delete consent flow required before any ring read, advance, or clear |
-| Metadata database and spool encryption | Crash, migration, key-loss, and rotation spike before durable audio |
+| Metadata database and spool encryption | Direct encrypted-snapshot SQLite plus Keystore/HMAC and immutable payload candidate passes API 36 emulator instrumentation; repeat on the Motorola and run forced-death/reboot/migration/key-loss tests, then design durable rotation before real audio |
+| Android Companion association/presence | Decision 0004 fixes explicit chooser/filter and API 29–37 branches; first run the next owned-phone process-local rotation preflight, then either select the explicit foreground fallback on `CHANGED` or implement the chooser and separately prove association resolution across process recreation before composing durable binding, user-stop/exit policy, or automatic presence |
 | Capture consent/retention and Idle AAD defaults | Product/privacy policy plus physical battery and microphone-off measurements before capture firmware |
-| Emergency power/reset gesture | Gesture reliability evidence before hold-to-talk owns long press |
+| Emergency power/reset and normal wake | Controlled Off transition, charger-independent button wake, post-wake microphone-off/no-resume truth, and emergency recovery evidence before hold-to-talk owns long press |
 | Object store, region, realtime transport, and AI providers | API contracts and representative quality/latency/privacy/cost evaluation before implementation |

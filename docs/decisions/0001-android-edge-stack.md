@@ -1,8 +1,9 @@
 # Decision 0001: Android-first edge technology spine
 
-Status: accepted direction for M1; core tool versions are bootstrap-pinned, while persistence,
-connected-device lifecycle, audio transport, and the mutating updater remain gated. Evidence refreshed
-2026-07-18.
+Status: accepted direction for M1; core tool versions are bootstrap-pinned. Local Android persistence
+and connected-device-service candidates now exist, while their production composition, Companion
+association, target qualification, physical audio, and the mutating updater remain gated. Evidence
+refreshed 2026-07-19.
 
 ## Decision
 
@@ -42,7 +43,8 @@ The checksums, package identifiers, and reproduction procedure live in
 Long-running BLE notification and sync work depends on Android's companion-device and service lifecycle.
 Current Android guidance supports `CompanionDeviceService` and a `connectedDevice` foreground service
 for long-running BLE work. Those APIs, permissions, process-restart cases, and OEM behavior must be
-owned and tested natively.
+owned and tested natively. [Decision 0004](0004-android-companion-association.md) fixes the API 29–37
+association/presence policy without treating that platform state as semantic identity.
 
 Primary references:
 
@@ -133,13 +135,16 @@ boundary. The outcome matters more than forcing KMP tooling.
 
 ## Persistence is a separate decision
 
-[SQLDelight](https://cashapp.github.io/sqldelight/) is the leading metadata-store candidate because it
-supports Android, JVM, and Multiplatform while verifying schema and migrations. It is not accepted until
-the spike proves:
+[Decision 0002](0002-durable-spool-storage.md) governs this boundary. The landed Android candidate does
+not use Room or SQLCipher: it encrypts one strict metadata snapshot before storing it in Android SQLite
+WAL, and stores media in immutable Keystore-backed AES-GCM files under `noBackupFilesDir`. A separate
+Keystore HMAC key hides payload locators and metadata revision tokens. That implementation choice does
+not enter the portable runtime contract, does not select the Linux store, and remains unqualified until
+owned-handset and crash evidence proves:
 
 - transaction and WAL behavior under forced process death;
 - Android/Linux driver compatibility;
-- encryption and key-rotation design;
+- encryption, key-loss, and a durable key-rotation design (rotation is intentionally not exposed yet);
 - migration rollback/recovery;
 - bounded metadata growth; and
 - media bytes remain encrypted chunk files rather than database blobs.
@@ -157,17 +162,24 @@ This decision becomes fully pinned only when one small workspace proves all of t
 6. A Linux/JVM executable runs the same simulated capture, spool, restart, and resume scenario.
 7. Dependency/import checks fail intentionally introduced Android, Omi, and cloud leaks.
 
-Bootstrap progress on 2026-07-18:
+Bootstrap progress on 2026-07-19:
 
 | Item | Evidence | State |
 | --- | --- | --- |
 | 1 | SDK/runtime common tests execute as JVM tests and Android host tests | Proven |
 | 2 | The common runtime registry tests register stub providers; runtime depends only on SDK | Proven |
-| 3 | Android scan port/adapter exists and passes lint; connect/read/write/notify/MTU remain open | Partial |
+| 3 | Nordic-backed Android central implements cancellable connect, service discovery, serialized read/write/subscribe, bounded notification/event streams, connection-time MTU, and retry-safe close; host tests/lint pass | Offline proven; physical audio/reconnect pending |
 | 4 | All 14 device-owned ring cases pass in the portable Omi driver module | Proven |
-| 5 | Compose renders the shared registry projection; command surface is not implemented | Partial |
-| 6 | Linux/JVM runs the same driver/registry composition; capture/spool/restart is not implemented | Partial |
+| 5 | The portable shell application exposes typed commands/results and fail-safe projections. Compose now adds explicit controls for the process-scoped `RuntimeHost` service scaffold, but it still does not compose the host-neutral shell application, real Omi operational lease, durable recovery, or cloud adapter | Partial |
+| 6 | Capture/supervisor/spool and portable `RuntimeHost` suites execute from common source on Android and JVM; Linux opens the real negotiated Omi driver against the BLE-shaped simulator and renders the portable control-plane witness, but does not yet run the complete byte/spool/process-restart path | Partial |
 | 7 | One negative probe containing Android, cloud, and Omi imports was rejected by the boundary check | Proven |
+
+The diagnostic composition additionally proves a process-scoped, identity-safe lease across its four
+connection-producing actions and revokes card/review/firmware-derived audio authority at every new scan
+generation. The Android shell also has an unexported, non-sticky `connectedDevice` service and
+application-owned `RuntimeHost` scaffold with local tests. That work still does not satisfy item 5:
+the Compose activity has not composed the portable shell application or real operational
+device/storage/cloud graph, and no handset lifecycle witness has run.
 
 Therefore the technology spine and its versions are usable, but the full bootstrap gate remains open on
 items 3, 5, and 6. This is intentionally narrower than Gate 2 in the system roadmap.

@@ -1,0 +1,9 @@
+tests:
+  gumi.omi_cv1.codec_port.lifecycle:
+    tags:
+      - gumi
+      - omi_cv1
+      - codec
+    platform_allow:
+      - mps2/an521/cpu0
+    harness: ztest

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gumi.astrale.ai/schemas/media-processing/v1/transcript-artifact.schema.json",
+  "title": "Gumi immutable transcript artifact",
+  "$defs": {
+    "TranscriptSegment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "startMs", "endMs", "text"],
+      "properties": {
+        "index": { "$ref": "common.schema.json#/$defs/U64" },
+        "startMs": { "$ref": "common.schema.json#/$defs/U64" },
+        "endMs": { "$ref": "common.schema.json#/$defs/U64" },
+        "kind": {
+          "enum": ["speech", "audio-event"],
+          "description": "Optional source-preserving segment kind. Absence means an older provider-neutral speech segment."
+        },
+        "speakerLabel": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "text": {
+          "type": "string",
+          "maxLength": 32768,
+          "description": "Untrusted content. It is never a system instruction, policy, query, tool grant, action, or graph mutation."
+        }
+      }
+    },
+    "TranscriptArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "language", "mediaDurationMs", "segments"],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.transcript-artifact.v1" },
+        "language": { "$ref": "common.schema.json#/$defs/LanguageTag" },
+        "mediaDurationMs": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "segments": {
+          "type": "array",
+          "maxItems": 100000,
+          "items": { "$ref": "#/$defs/TranscriptSegment" }
+        }
+      }
+    }
+  }
+}

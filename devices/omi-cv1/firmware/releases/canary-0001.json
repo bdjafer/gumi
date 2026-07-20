@@ -1,0 +1,79 @@
+{
+  "owner": "devices/omi-cv1",
+  "release_schema": "gumi.omi-cv1.application-canary/v1",
+  "release_id": "omi-cv1-v3012-stock-to-gumi-canary-0001",
+  "intent": "application-image-0 identity-only canary",
+  "source": {
+    "upstream_tag": "Omi_CV1_v3.0.12",
+    "upstream_commit": "85159556eac753a088c5efd1b419a5a867508e27",
+    "application_image_index": 0,
+    "application_mcuboot_image_hash": "0eed1a42063975be5f8aee0e0df710122de445f7473681ba780bdcdad2fe7b36",
+    "network_image_index": 1,
+    "network_mcuboot_image_hash": "267b11e2d413acebb874c76204be9f5f3872b9d033bd228ba5bcd46a27903089",
+    "mcuboot_version": "0.0.0+0"
+  },
+  "application_artifact": {
+    "identity": "gumi/Omi_CV1_v3.0.12/canary-0001/omi.signed.bin",
+    "size_bytes": 228724,
+    "file_sha256": "65e4ae91637e6aa576f6d3f8286db33bc9bd36ece8ece1aaa6b6aa5c5b204f6d",
+    "image_index": 0,
+    "header_size_bytes": 512,
+    "payload_size_bytes": 227876,
+    "protected_tlv_size_bytes": 0,
+    "mcuboot_image_hash": "d3b3c74c10c4fa110763ae5523d0aeaa20b9f815b8674167486be6ff6f8052ce",
+    "mcuboot_version": "0.0.0+0",
+    "compatibility_key_hash": "fc5701dc6135e1323847bdc40f04d2e5bee5833b23c29f93593d00018cfa9994",
+    "signature": "RSA-2048-PSS",
+    "security_counter": null,
+    "deterministic_prefix_bytes": 228468,
+    "signature_verified": true
+  },
+  "observable_identity": {
+    "device_information_firmware_revision": "3.0.12",
+    "device_information_software_revision": "gumi-canary-0001",
+    "boot_led": "three short magenta pulses before microphone startup"
+  },
+  "build": {
+    "overlay_patch_sha256": "afbcb090bcb5f3b4d74b4a95acf9752253cdb6c31fa6407904e4b6c416248c43",
+    "ncs_version": "v2.9.0",
+    "zephyr_sdk": "0.17.0",
+    "toolchain_image": "ghcr.io/nrfconnect/sdk-nrf-toolchain:v2.9.0@sha256:7e9b61475ca05b8517079bedc8645479101fdaa17de2d0fa06a1633288112db2",
+    "partition_map_sha256": "b455f45133912e7d5e2d27a0cb40c018620bd101d164b14d8e805e0c1a0f30f9",
+    "partition_map_matches_canonical_stock_build": true
+  },
+  "qualification": {
+    "imgtool_version": "2.1.0",
+    "signature_result": "Image was correctly validated",
+    "performed_utc_date": "2026-07-19",
+    "device_was_contacted": false
+  },
+  "stock_recovery": {
+    "release_id": "omi-cv1-v3012-gumi-canary-0001-to-stock",
+    "required_source_application_mcuboot_image_hash": "d3b3c74c10c4fa110763ae5523d0aeaa20b9f815b8674167486be6ff6f8052ce",
+    "required_source_network_mcuboot_image_hash": "267b11e2d413acebb874c76204be9f5f3872b9d033bd228ba5bcd46a27903089",
+    "official_application_size_bytes": 228632,
+    "official_application_file_sha256": "877990aabf267fb3f281803cfa3c2aec8f29a86bfa8fb4c05c79a024b07db9db",
+    "official_application_mcuboot_image_hash": "0eed1a42063975be5f8aee0e0df710122de445f7473681ba780bdcdad2fe7b36"
+  },
+  "quarantined_build_outputs": [
+    {
+      "file": "zephyr.bin",
+      "reason": "unsigned application",
+      "size_bytes": 227876,
+      "sha256": "784bc095006b5357d4d2aa471ede50451b42825b67b42388853e63e47fa1128b"
+    },
+    {
+      "file": "ipc_radio.bin",
+      "reason": "locally generated network image contains a non-published NSIB key",
+      "size_bytes": 175092,
+      "sha256": "43c04b4f7f4f6973fb4389b4e1fae69eaab774d90ee38994cf9efa2a8bcb38ef"
+    },
+    {
+      "file": "dfu_application.zip",
+      "reason": "multi-image package includes the quarantined network image",
+      "size_bytes": 405046,
+      "sha256": "7e58a629508d45552c4f5003cf3e875a6d75d3b134e94f1ab0e03f4878827b7f"
+    }
+  ],
+  "artifact_conveys_physical_authorization": false
+}

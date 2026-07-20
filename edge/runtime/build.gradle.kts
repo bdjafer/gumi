@@ -22,9 +22,15 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":edge:sdk"))
+            implementation(libs.kotlinx.coroutines.core)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
         }
     }
+}
+
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    systemProperty("gumi.repositoryRoot", rootProject.projectDir.absolutePath)
 }

@@ -1,0 +1,62 @@
+{
+  "schema": "gumi.omi-cv1.firmware-build-probe/v1",
+  "probe_id": "omi-cv1-v3012-mic-port-link-probe-0001",
+  "intent": "compile the repeat-safe Gumi microphone port against the pinned Omi CV1 v3.0.12 Zephyr and Nordic PDM implementation",
+  "source": {
+    "upstream_tag": "Omi_CV1_v3.0.12",
+    "upstream_commit": "85159556eac753a088c5efd1b419a5a867508e27",
+    "overlay_patch": "patches/1002-zephyr-mic-port-link-probe.patch",
+    "overlay_patch_sha256": "ae7d5ce35bdc4fd6cf00e69964811d5f580a8fa6744d563dc9ce37433cfad997",
+    "files_sha256": {
+      "gumi/zephyr/omi-v3012/include/gumi/omi_v3012_mic.h": "922b054be612aae87539c273da97eb3d4e2c00d616598cdb398176d03fd7a09b",
+      "gumi/zephyr/omi-v3012/src/mic_port.c": "0a1eb9f8e9748724f6b13071e19645803ef02730f3f93faa1fa21461fb70eafc"
+    },
+    "materialized_application_sha256": {
+      "omi/firmware/omi/CMakeLists.txt": "1facfeaefc365a10e7bc1d57129eeae86fd21924f02cd17ea2e7896d5fb24249",
+      "omi/firmware/omi/omi.conf": "4981597a50cbe1fa85f1afd2f966a352d3f03e4687478c408c579396b21924c0"
+    }
+  },
+  "build": {
+    "ncs_version": "v2.9.0",
+    "zephyr_commit": "1f8f3dc291420c70cd39e77a5cdc954561d4a08f",
+    "zephyr_sdk": "0.17.0",
+    "toolchain_image": "ghcr.io/nrfconnect/sdk-nrf-toolchain:v2.9.0@sha256:7e9b61475ca05b8517079bedc8645479101fdaa17de2d0fa06a1633288112db2",
+    "network_access": false,
+    "software_revision": "gumi-mic-port-probe-0001",
+    "partition_map_sha256": "b455f45133912e7d5e2d27a0cb40c018620bd101d164b14d8e805e0c1a0f30f9",
+    "partition_map_matches_canonical_stock_build": true,
+    "mic_port_object": {
+      "size_bytes": 38940,
+      "sha256": "ab765eb479b061e68d2a92c6ad397ced17b3b3e0675fd1ee60e42f126a6d1cf2"
+    },
+    "linker_map_sha256": "37b91b38391d7711f4171be8d16aed280c5dbf8a3c13e660dff470fc9929f1e2",
+    "linker_map_contains_mic_port_input": true,
+    "unused_mic_port_sections_were_garbage_collected": true
+  },
+  "quarantined_application_artifact": {
+    "unsigned_size_bytes": 227868,
+    "unsigned_sha256": "e56236fbb21d50a02410c3edec84287b1d9eeec4f3f86fb8f9eb836af4a0820f",
+    "signed_size_bytes": 228716,
+    "signed_file_sha256": "8a06ccf1b3b655d05cad57efa61f4bad7d9121cb7365660a184a7db3bf0a157a",
+    "mcuboot_image_hash": "6a54dfebdd49b55ff34c9618049c731785f81ad6fae8ec51b16e997e59fa3d28",
+    "mcuboot_version": "0.0.0+0",
+    "signature_verified": true,
+    "stored_in_git": false
+  },
+  "qualification": {
+    "real_upstream_application_compile": "pass",
+    "standalone_build_verifier": "pass",
+    "performed_utc_date": "2026-07-19",
+    "device_was_contacted": false,
+    "hardware_in_loop_performed": false
+  },
+  "runtime_scope": {
+    "mic_port_is_invoked": false,
+    "behavior_remains_stock": true,
+    "stock_always_on_microphone_remains": true,
+    "repeat_start_stop_is_proven_on_hardware": false,
+    "behavioral_candidate": false,
+    "physical_use_forbidden": true
+  },
+  "artifact_conveys_physical_authorization": false
+}

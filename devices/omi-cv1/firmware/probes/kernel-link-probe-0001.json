@@ -1,0 +1,74 @@
+{
+  "schema": "gumi.omi-cv1.firmware-build-probe/v1",
+  "probe_id": "omi-cv1-v3012-kernel-link-probe-0001",
+  "intent": "compile the portable Gumi device kernels against the pinned Omi CV1 v3.0.12 Zephyr application",
+  "source": {
+    "upstream_tag": "Omi_CV1_v3.0.12",
+    "upstream_commit": "85159556eac753a088c5efd1b419a5a867508e27",
+    "overlay_patch": "patches/1001-kernel-link-probe.patch",
+    "overlay_patch_sha256": "395a8ed71be04449981a453997fa028a82c03b70ac05b56a20c82cf3ad80993f",
+    "files_sha256": {
+      "gumi/include/gumi/button.h": "3d687a7aa02b652d4ea21d4269f36504df017fb6e4d9670a84039502b041c633",
+      "gumi/include/gumi/capture.h": "a703d085133c886fb46679451f743d1353431bb42548d9d03e09002bdbed7dfd",
+      "gumi/include/gumi/feedback.h": "c79b7f224d7651c1b92a46dd321f11c2cf20707302f7fe990a0ffa8687ce7e98",
+      "gumi/src/button.c": "61c389380dc16056a1bad9cb341bc488fd3ffebbfd675faba916014a4e939262",
+      "gumi/src/capture.c": "625d9ea850575886000fa7f2138e079962324820be6a966ed10624d0439f5a2a",
+      "gumi/src/feedback.c": "f0fffc6d20a658d377150f1e55fe63f2f5c9d5b3e7dcd81f11b1936610b66f0c"
+    }
+  },
+  "build": {
+    "ncs_version": "v2.9.0",
+    "zephyr_commit": "1f8f3dc291420c70cd39e77a5cdc954561d4a08f",
+    "zephyr_sdk": "0.17.0",
+    "toolchain_image": "ghcr.io/nrfconnect/sdk-nrf-toolchain:v2.9.0@sha256:7e9b61475ca05b8517079bedc8645479101fdaa17de2d0fa06a1633288112db2",
+    "network_access": false,
+    "software_revision": "gumi-kernel-link-probe-0001",
+    "partition_map_sha256": "b455f45133912e7d5e2d27a0cb40c018620bd101d164b14d8e805e0c1a0f30f9",
+    "partition_map_matches_canonical_stock_build": true,
+    "kernel_objects": {
+      "button.c.obj": {
+        "size_bytes": 27412,
+        "sha256": "3e55fbf171adf9969fd2cb169e3237bf66a0d4f967089144e88ed2d3d31684b5"
+      },
+      "capture.c.obj": {
+        "size_bytes": 59400,
+        "sha256": "ecd07f7f088edccf3394905e89e8a0cdcbd93c6e8ba17c7085364a7acd37c098"
+      },
+      "feedback.c.obj": {
+        "size_bytes": 15528,
+        "sha256": "a8d2021dd1c271376490376a02bc2a27434dbf565a17238ce8f7dc82d4143fe0"
+      }
+    },
+    "linker_map_contains_kernel_inputs": true,
+    "unused_kernel_sections_were_garbage_collected": true
+  },
+  "quarantined_application_artifact": {
+    "unsigned_size_bytes": 227872,
+    "unsigned_sha256": "a035a2c19f6e6523c92935c829e3c05be29c9f3e71f361aca56f84428d3eb1e8",
+    "signed_size_bytes": 228720,
+    "signed_file_sha256": "061c3fc81548a7848c445f7088093df77049a40207efaa17f2be45631ab555c9",
+    "mcuboot_image_hash": "d83b57a92e9a604e5617536014f9c0e9291139c211a708d0cae36885b34a6785",
+    "mcuboot_version": "0.0.0+0",
+    "signature_verified": true,
+    "stored_in_git": false
+  },
+  "qualification": {
+    "portable_button_tests": 16,
+    "portable_capture_tests": 19,
+    "portable_feedback_tests": 7,
+    "contract_sync_tests": 6,
+    "clang_static_analysis": "pass",
+    "address_and_undefined_behavior_sanitizers": "pass",
+    "standalone_build_verifier": "pass",
+    "performed_utc_date": "2026-07-19",
+    "device_was_contacted": false
+  },
+  "runtime_scope": {
+    "kernel_is_invoked": false,
+    "behavior_remains_stock": true,
+    "stock_always_on_microphone_remains": true,
+    "behavioral_candidate": false,
+    "physical_use_forbidden": true
+  },
+  "artifact_conveys_physical_authorization": false
+}

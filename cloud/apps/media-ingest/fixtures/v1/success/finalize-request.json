@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "gumi.media-ingest.finalize.v1",
+  "requestId": "0190c6f0-7b21-7a40-8b11-000000000008",
+  "streams": [
+    {
+      "streamId": "0190c6f0-7b21-7a40-8b11-000000000006",
+      "expectedRange": { "first": "0", "last": "3" },
+      "expectedChunkCount": "2",
+      "expectedByteLength": "241",
+      "expectedContentDigest": "sha256:cb8e3d3949474d1aa7ca9aedc45868a099c44ce4f258ca812a5ad41dbc9488bd"
+    }
+  ]
+}

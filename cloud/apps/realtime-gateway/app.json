@@ -1,0 +1,38 @@
+{
+  "$schema": "../../catalog/application-manifest.schema.json",
+  "schemaVersion": 1,
+  "appId": "realtime-gateway",
+  "kind": "realtime-service",
+  "owner": "gumi-realtime-transport",
+  "summary": "Owns admission-scoped VoiceTurn transport, reconnect fencing, correlated provider-attempt outcome, and bounded display results.",
+  "durableAuthority": [
+    "VoiceTurn session, turn, retry, connection-generation, sequence, and terminal transport outcome truth",
+    "Correlated provider-attempt trace and bounded edge-display result projection"
+  ],
+  "dataClasses": ["raw-media", "derived-content", "operational-metadata"],
+  "tenancy": {
+    "mode": "dedicated-deployment",
+    "sharedDeployment": false,
+    "scopeSource": "deployment-binding"
+  },
+  "contracts": [
+    {
+      "id": "realtime-gateway-v1",
+      "protocol": "realtime",
+      "version": "v1",
+      "path": "api/v1/protocol.schema.json"
+    }
+  ],
+  "dependencies": [],
+  "deployment": {
+    "status": "local-only",
+    "target": null,
+    "regions": []
+  },
+  "retention": {
+    "status": "unselected",
+    "class": "sensitive-user-content",
+    "policyId": null
+  },
+  "runbook": "README.md"
+}

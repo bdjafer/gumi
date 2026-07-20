@@ -1,6 +1,6 @@
 # Gumi roadmap
 
-Status: working execution roadmap, 2026-07-19. M1 is the first complete product milestone, not a reduced
+Status: working execution roadmap, 2026-07-20. M1 is the first complete product milestone, not a reduced
 demo milestone.
 
 ## M1 outcome
@@ -15,21 +15,26 @@ M1 delivers the entire owned Omi CV1 → Android edge → cloud applications →
 - qualified OTA recovery, privacy, deletion, security, power, and fault behavior.
 
 The detailed behavioral contract remains [the M1 system contract](specs/m1-system-contract.md). This
-roadmap governs order, proof, and workstream convergence.
+roadmap governs order, proof, and workstream convergence. The
+[M1 evidence matrix](qualification/m1-evidence-matrix.md) assigns stable requirement IDs and keeps
+source/local, hardware, deployed, and end-to-end proof distinct.
 
 ## Current position
 
 | Area | Current evidence | State | Next proof |
 | --- | --- | --- | --- |
 | Repository boundary | `devices / edge / cloud` ownership and dependency law specified | Enforced for landed Kotlin modules | Extend checks as platform/cloud modules land |
-| Omi hardware | Owned unit identified as stock v3.0.12/hardware 5.0; advertisement and 11-service/21-characteristic GATT profile captured | Connected read-only proven | Run the prepared image-state handoff, then behavior/power baselines |
-| Firmware build | Official installed v3.0.12 images verified; stock v3.0.20 application payload reproduced | Artifact/build-proven | Match installed hashes, then app-image-only stock recovery and visible canary |
+| Omi hardware | Owned unit identified as stock v3.0.12/hardware 5.0; advertisement, 11-service/21-characteristic GATT profile, portable-driver negotiation, exact application hash, and bounded stock audio metadata captured. MCU Manager exposed no network row. The observed Off state did not wake from button attempts and recovered on charger insertion | Application/audio read-only proven; network/secondary and power behavior partial | Resolve stock behavior/storage/reconnect and controlled power/wake baselines; keep OTA blocked until network/secondary state and app-only mutation isolation are proved |
+| Omi human I/O | Proposed CV1 mapping plus pure reference oracle; the exact 20-case corpus now drives the recognizer, lifecycle/fault/arbitration coordinator, portable control plane, and device-neutral physical-output truth in local simulator and shell suites; all 13 logical indicator and 10 haptic definitions are contract-checked | Local cross-layer reference path executable; custom-firmware and physical proof open | Bind the contract to custom firmware and the real driver/runtime shell, then collect reviewed HIL timing/LED/haptic evidence |
+| Firmware build | Official v3.0.12 bundle verified; exact-source application reproduced; owned application hash matched; identity-only canary qualified offline. Isolated image-0 updater/recovery logic passes 27 tests and rechecks full slot truth immediately before upload. Network/secondary state remain unobserved | Application artifact/build/physical identity and updater logic proven offline; physical mutation blocked | Preserve the behavior-neutral canary; resolve full slot truth and independently review authorization/post-reboot binding before any explicit owner go/no-go |
 | Network-core safety | Clean-build NSIB key mismatch identified | Known constraint | Prove image `1` remains byte/hash unchanged during every canary |
-| Android lifecycle | Compose shell, platform-neutral BLE/firmware ports, Nordic BLE 2.11.0 and Device Manager 2.8.0 adapters; GATT exercised physically and image-state mapped/tested offline | GATT physical / firmware offline proven | Execute image-state read, then add connected-device service, lifecycle/reconnect tests, and audio transport |
-| Edge runtime | KMP SDK/runtime, registry, Omi driver, Android host tests, and Linux witness compile | Bootstrap-proven | Add transport port/adapters, simulator, capture state machine, and durable spool |
-| Cloud data plane | M1 invariants specified, provider/runtime unselected | Design pending | Contract plus local ingest/object-manifest vertical |
-| Astrale semantics | Initial vocabulary and authority rules specified | Design pending | Method-ownership and authorization table, then simulation/live proof |
-| Physical acceptance | Advertisement plus GATT discovery/allowlisted reads captured; image-state operation disclosed and independently guarded but not yet run | Gate 0 partial | Owner-tapped MCU image state, then gesture/reconnect/audio/power observations |
+| Android lifecycle | Compose diagnostics plus a local application-owned `RuntimeHost`, unexported/non-sticky `connectedDevice` service, redacted notification, explicit Activity controls, one foreground-execution owner, one process-global spool owner, and a `DeviceId`-keyed runtime registry/router; 3/3 Intent/framework instrumentation cases pass on an API 36 ARM64 emulator. The operational runtime/storage/shell bridge executes offline, while the production factory intentionally lacks binding/endpoint-backed association/recovery. Driver, image-state, disclosure UI, and bounded audio diagnostics have now run physically | Local service/framework and process-owner candidates / bounded device diagnostics physical | Complete the named Motorola storage/service/process/OEM matrix separately; keep diagnostic audio outside product recording; implement durable binding/user-stop and the explicit M1 runtime only after device identity/capture truth gates |
+| Edge runtime | Typed capability/supervisor/spool/upload core, portable `RuntimeHost`, one-device `OperationalDeviceRuntime`, `DeviceId` runtime registry/router, process-global spool owner, one-host Android operational graph, generation-fenced `OperationalShellBridge`, host-neutral shell/control presentation, exact-profile Omi simulator, Linux negotiated-driver witness, Android encrypted spool adapter, and one-attempt OkHttp chunk adapter pass local suites; `EDGE_HOST` backlog is explicitly withheld from per-device shell truth; the original five Android storage primitive cases pass on an API 36 ARM64 emulator, while two newer operational/cancellation cases are compile-only | Offline/local-framework candidates, not the provisioned Android product graph | Instantiate one explicit M1 runtime from durable binding/endpoint ports, run all seven storage cases on the Motorola, then prove forced-death/reboot without claiming capture or upload |
+| Cloud data plane | Publisher-owned OpenAPI/JSON Schema, provider-neutral core, adversarial fixtures, exact Ogg/Opus assembly, and a dependency-free Node HTTP boundary for all six operations with local auth/body/routing/problem/log tests | Contract/core/HTTP locally executable | Implement real verifier/revocation, durable metadata/object stores, limiter, retention, TLS ingress and deployment; freeze only after crash/abuse/end-to-end qualification |
+| Cloud processing | Provider-neutral job/attempt/lease core, explicit outcome-unknown recovery, scoped callback boundary, immutable transcript artifact/provenance, bounded digest-bound content pages, and crash suite | Contract/core executable | Select/evaluate provider and production auth/store/worker adapters, then deploy one digest-bound job |
+| Astrale semantics | Official `gumi.astrale.ai` scaffold; generated publisher types; caller-scoped Device/CaptureSession/Recording authority; immutable object facts; one-shot terminal receipts; Recording-bound, page-resumable Transcript publication; authorized Conversation membership; and a bounded Conversation target view/client with provenance and integrity checks pass local adversarial simulations | Local executable, including the Conversation read surface | Add provisioning/tenant identity, install live, and run authorized/adversarial multi-recording witnesses against the installed domain |
+| Physical acceptance | Advertisement/GATT/allowlisted reads, driver negotiation, corrected image-state, and 10-second content-free audio metadata captured. Application matches v3.0.12; network/secondary state is unobserved. Stock Off-state button wake failed in an uncontrolled observation and charger insertion recovered it | Gate 0 partial | Controlled gesture/indication/reconnect/storage/power matrix, including deterministic Off transition, charger-independent button wake, and post-wake microphone truth |
+| Companion association | Official API 29–37 chooser/presence plan fixes the exact Omi filter and keeps platform evidence separate from identity; no adapter exists | Design only | Run the next owned-phone process-local rotation preflight; on `CHANGED`, use the foreground fallback, otherwise implement Decision 0004 and separately prove association resolution across process recreation before presence |
 
 ## Execution rules
 
@@ -239,37 +244,156 @@ Work that should proceed now, in dependency order:
 
 1. **Done:** bootstrap the Kotlin-first edge workspace, enforce dependency and firmware-mutation
    boundaries, and prove Android/JVM builds.
-2. **Prepared, awaiting phone:** run the deterministic
-   [image-state handoff](development/omi-image-state-handoff.md), compare both active hashes with the
-   official v3.0.12 oracle, and stop on transitional/mismatch/incomplete state.
-3. Complete the remaining Gate 0 gesture, indication, reconnect, audio, storage, and power observations
-   before any OTA action.
+2. **Physical diagnostic completed with a bounded result:** the deterministic
+   [image-state handoff](development/omi-image-state-handoff.md) matched the installed application to
+   official v3.0.12, explicitly classified the absent network row as
+   `APPLICATION_MATCH_NETWORK_UNOBSERVED`, and qualified one content-free 10-second audio metadata run.
+   This closes neither full image identity nor OTA authorization.
+3. Complete the remaining Gate 0 gesture, indication, reconnect, storage, and controlled power/wake
+   observations before any OTA action. Treat charger-only recovery as a stock qualification gap; do not
+   infer pairing or silently make a charger part of Gumi's normal wake contract.
 4. Establish the baseline commit before importing upstream history.
 5. Import the pinned Omi firmware subtree at `devices/omi-cv1/firmware` and reproduce the application
    build through a repository-owned command.
-6. **In progress:** the portable Omi ring codec passes all 14 golden cases; build the deterministic
-   GATT/device simulator from the observed v3.0.12 and expected v3.0.20 profiles.
-7. **In progress:** the Android Compose diagnostic shell is installed on the owned phone and the
-   read-only scanner and Nordic GATT inspector succeeded on the owned pendant; add the connected-device
-   lifecycle service and read-only audio streaming.
-8. After Gate 0 and a separate design review, build the separately guarded image-`0` updater; do not
-   reuse or widen the inspection port.
-9. Specify the provider-owned media-ingest API and immutable manifest concurrently with local edge work.
-10. Model Astrale method ownership and authorization before installing any live semantic app.
+6. **Offline v3.0.12 witness done:** the portable Omi ring codec passes all 14 golden cases; the
+   deterministic simulator exactly matches the observed 11-service/21-characteristic profile, drives
+   negotiated typed handles, and injects split/duplicate/reorder/disconnect/reboot/failure scripts.
+   The v3.0.20 simulator remains gated on its first required behavior.
+7. **Bounded physical diagnostic done:** the Android Compose shell is installed on the owned phone; the
+   read-only scanner/GATT inspector, driver negotiation, disclosure modal, application image-state, and
+   content-free live-audio metadata witness succeeded on the pendant; the network image and secondary
+   slots remain unobserved; the
+   operational Nordic central and explicit driver-negotiation probe pass tests proving three reads,
+   zero writes/subscriptions, and guaranteed close. Its one process-scoped diagnostic lease stays held
+   through cancellation cleanup, and a new scan invalidates prior card/review/firmware/audio authority.
+   Preserve the transactional bundles and repeat only after a relevant APK/firmware change or a named
+   qualification need. The operational service scaffold is already local, but it remains deliberately
+   unable to recover or connect; do not mix it into this foreground diagnostic gate.
+8. **Human-I/O reference owners complete / end-to-end and physical proof open:** the proposed CV1
+   grammar has a pure deterministic oracle. It loads the exact 20-case corpus, proves the one debounce
+   trace plus all 12 recognizer-owned traces with exact ordered equality, and executes all seven
+   capture-fault, lifecycle-projection, and output-arbitration cases through their owning model. The
+   model's 13 logical indicator definitions and 10 switched-ERM patterns are checked exactly against
+   `contract.json`. Gesture-to-effect completion is not yet one end-to-end firmware simulation, and
+   none of this is stock/custom firmware or physical gesture/output proof.
+9. **Portable host and Android service scaffold done / product composition open:** `RuntimeHost`
+   serializes host commands and effects, establishes foreground before recovery, replays duplicate
+   command identities, preserves explicit user-stop suppression, and conservatively cleans up
+   cancellation, stale completion, and outcome-unknown cases in common JVM/Android-host tests. The
+   Android shell now adds an application
+   owner, unexported/non-sticky `connectedDevice` service, provisional foreground promotion, exact
+   endpoint release, coalesced stops, UUID retry identities, notification actions, and explicit Activity
+   controls. Its production ports intentionally refuse association/recovery; Companion association,
+   durable binding/user-stop restoration, portable-shell/Omi/spool/cloud composition, named
+   device/update/sync leases and the Motorola lifecycle matrix remain open. The shell Intent suite has
+   executed 3/3 on an API 36 ARM64 emulator; that does not prove service survival or OEM behavior.
+   Separately, the portable `OperationalDeviceRuntime` now proves ordered binding, storage, transport,
+   endpoint, negotiation and power acquisition plus reverse cleanup; the Android operational-storage
+   adapter and `OperationalShellBridge` pass focused local suites. Capture remains unverified and the
+   Android factory does not compose these pieces.
+10. **Dedicated application-only flash lab ready offline / physical owner gate pending:** the separate
+   Android APK pins only stock-to-canary and canary-to-stock, packages exactly those two application
+   binaries, exposes no network/multi-image/generic updater, rechecks source state immediately before
+   upload, verifies staged/confirmed state, and treats reset disconnect as outcome-unknown pending a
+   fresh read. Its tests cover the complete dry-run, source drift, cancellation, endpoint substitution,
+   and post-reboot validation. Under Decision 0005, a wholly absent network row is accepted only for
+   these two transitions; any visible network evidence must match exact stock. Scoped lint, 37 unit
+   tests, input-artifact verification, and final-APK permission/asset audit pass. The APK is not part of
+   the product shell and no physical mutation is authorized until the fresh owner-reviewed preflight.
+11. **Contract/core/HTTP and edge chunk candidate done locally:** the provider-owned media-ingest API
+   and core pass the contract/failure suites for exact ACKs, renewal, conflict/gap/finalization sets,
+   canonical digests, and byte-exact Ogg/Opus assembly. Its Node HTTP adapter covers all six routes with
+   strict credential classes, bounded streaming, canonical routing, exact content metadata, typed
+   problems, disconnect handling, and allowlisted logs. The portable edge coordinator proves deterministic durable
+   selection, verified payload reads, pre-attempt fencing, one-call serialization, exact normalized ACK
+   application, and non-blind unknown/rejected recovery; the OkHttp adapter adds a 1 MiB preflight cap,
+   dedicated no-hook/no-retry client, strict string ACK validation, and exact problem content type.
+   Keep these local candidates behind ports; production credentials/revocation, stores, limiter,
+   deployment, Android composition, and the end-to-end authorization path remain unproved.
+12. **Android storage candidate emulator-proven / handset pending:** Keystore AES-GCM/HMAC, an
+   encrypted SQLite/WAL snapshot, immutable no-backup payload files, exclusive opening, and startup
+   reconciliation implement the portable ports. The original five instrumentation cases pass on an
+   API 36 ARM64 emulator, including real Keystore, SQLite WAL/FULL, flush/atomic rename,
+   reopen/exclusive ownership, missing-row/payload, key loss, and plaintext-scan cases. Two newer
+   cancellation/operational-lease cases compile but await Android execution. The adapter deliberately exposes
+   one process-global M1 spool and an edge-host-global backlog; it is not a per-device store. Motorola/OEM
+   execution, forced-death, reboot, migration, durable rotation, rollback scope, and operational
+   composition remain gates.
+13. **Local slice done:** Device, CaptureSession close, and manifest-backed Recording ownership, caller
+    gates, generated publisher projection, capture/device/edge-host validation, fixed-path terminal
+    receipts, and concurrent retry convergence are executable in `gumi.astrale.ai`. Provisioning,
+    tenant/global identity, and live install simulation remain required before deployment.
+14. **Processing-to-semantics vertical done locally:** `media-processing` owns digest-bound jobs,
+    bounded attempt/lease generations, explicit outcome-unknown retry, provider-scoped callbacks,
+    immutable transcript artifacts/provenance, and bounded no-store content pages. `gumi.astrale.ai`
+    consumes generated types through a caller/Recording-bound reader, imports exact pages behind atomic
+    receipts, keeps provider text inert, resumes after an outage, and validates complete ready replay
+    without another provider read. Select providers and production adapters only after the evaluation
+    and authorization gates; local simulations do not claim a real transcription, deployment, or live
+    Astrale installation.
+15. **Conversation read vertical and cloud operating model done locally:** authorized Conversation
+    creation/membership, exact Recording/Transcript provenance, and a bounded target view/client reject
+    substitution and integrity contradictions while rendering transcript text inert. The cloud app
+    catalog also makes deployment-unit ownership explicit. These are local witnesses only: provisioning,
+    live install, durable adapters, and deployed multi-recording evidence remain open.
 
-Steps 4–7 and 9–10 can advance while the physical probe is waiting; Gate 1 cannot.
+### Next honest Android product slice
+
+Do not turn the local service, operational runtime, storage, shell bridge, driver, and HTTP candidates
+into a recording/upload claim by connecting them directly. The stock Omi session currently has
+`deviceId = null`, exposes no
+`CaptureControl`, and provides no capture-state observation. No operational live-media owner yet binds
+notifications to a mux snapshot, durable source checkpoint, or spool advancement. Android also lacks
+the composed product recovery/event ingress, durable provisioning binding and endpoint resolver,
+cloud-auth composition, required product dependency edges, and `INTERNET` permission. `USER_STOPPED`
+is process-local only, and no production scheduler currently ages quiet shell projections.
+
+The implementation order is:
+
+1. **Done as an unprovisioned local composition primitive:** one process owner now combines one
+   foreground-execution lease, one spool owner, and a `DeviceId`-keyed runtime registry/command router,
+   without an automatic start source. The production `Application` still uses fail-closed recovery and
+   does not instantiate this graph;
+2. instantiate exactly one explicit M1 device and bridge its `OperationalDeviceRuntime` to
+   `DefaultShellApplication`; do not instantiate one Android foreground host per device;
+3. open the process-global encrypted spool to `Ready` before BLE. Until capture metadata is durably
+   device-bound, expose its recovered backlog only as edge-host-global, never per-device truth;
+4. run Decision 0004's process-local rotation preflight; on `CHANGED`, retain explicit foreground
+   selection, otherwise implement the chooser/association adapter and require a separate cross-process
+   association-resolution handset gate before claiming Companion presence; add the durable
+   provisioned-device binding in either branch;
+5. add the production shell freshness scheduler and persist user-stop/exit policy before enabling any
+   presence-driven start;
+6. qualify upload independently with synthetic already-durable chunks, real scoped auth, and no device
+   capture dependency;
+7. add the live media/mux/checkpoint owner only after capture truth and cursor policy exist.
+
+The first owned-handset operational witness is deliberately smaller than recording: a person explicitly
+selects/associates the device according to the chosen foreground/Companion branch, storage reports `Ready`, an explicit
+start obtains the visible foreground lease, exactly one Omi BLE session reports real link/power facts,
+capture remains unverified, zero audio notification is subscribed, and explicit stop closes the device
+and service cleanly. It reads no ring content, advances no cursor, records/uploads no audio, and starts
+no automatic presence loop. If any condition is missing, the witness fails closed rather than shrinking
+its claim.
+
+Steps 4–14 can advance while the physical probe is waiting; Gate 1 cannot.
 
 Environment note, 2026-07-19: the host originally had no JDK, Gradle, Android SDK, `adb`, or Android
 Studio. A checksum-verified workspace-local JDK 17/Android toolchain and Gradle wrapper are now installed;
 the exact pins and handset handoff are recorded in [the bootstrap runbook](development/bootstrap.md).
-This closes the build bootstrap risk, not Gate 2's BLE, spool, restart, and physical-device evidence.
+This closes the build bootstrap risk. Local encrypted-storage/service/HTTP candidates also exist, and
+the two Android instrumentation suites run on an API 36 emulator, but their owned-handset execution and
+product composition remain open; Gate 2's physical BLE/audio, process restart, and owned-device evidence
+are not closed.
 
 ## Decision schedule
 
 | Decision | Must be made before | Evidence required |
 | --- | --- | --- |
 | Exact Android/Kotlin/Gradle pins (resolved for current bootstrap) | Re-open only on measured incompatibility | Android + Linux/JVM compile/test gate remains green |
-| Metadata database and spool encryption | First durable local audio | Crash recovery, key rotation, packaging/license spike |
+| Metadata database and spool encryption | First durable local audio | Repeat the landed [Decision 0002](decisions/0002-durable-spool-storage.md) candidate on the Motorola, then run forced death/reboot, migrations, key loss, durable rotation design, and rollback-scope witnesses |
+| Android runtime-host lifecycle | First background BLE capture | Complete [Decision 0003](decisions/0003-android-runtime-host-lifecycle.md): real device/storage/cloud composition, durable restart/user-stop policy, process-wide lease, and OEM lifecycle witnesses |
+| Android Companion association/presence | Any automatic presence start | Execute [Decision 0004](decisions/0004-android-companion-association.md): process-local stock rotation preflight, explicit chooser, API 29–37 adapter, post-implementation association resolution across process recreation, generation fencing, durable binding, and user-stop/exit negatives |
 | Existing stock-media disposition | First ring-content read | Explicit owner choice, consent scope, import/delete recovery semantics |
 | Capture/participant consent policy | First real recording outside a controlled test | Applicable product/legal policy, physical indication, revocation/stop behavior |
 | Idle AAD policy and retention defaults | Custom capture firmware | Battery/privacy/product measurements |

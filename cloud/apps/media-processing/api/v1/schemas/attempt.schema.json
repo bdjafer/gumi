@@ -1,0 +1,322 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gumi.astrale.ai/schemas/media-processing/v1/attempt.schema.json",
+  "title": "Gumi media processing attempt and lease values",
+  "$defs": {
+    "ClaimAttemptRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "requestId", "processingJobId", "expectedGeneration"],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.claim-attempt.v1" },
+        "requestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "expectedGeneration": { "$ref": "common.schema.json#/$defs/U64" }
+      }
+    },
+    "WorkerInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifestId",
+        "manifestDigest",
+        "objectHandle",
+        "contentDigest",
+        "contentType",
+        "byteLength",
+        "durationMs"
+      ],
+      "properties": {
+        "manifestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "manifestDigest": { "$ref": "common.schema.json#/$defs/Sha256Digest" },
+        "objectHandle": { "$ref": "common.schema.json#/$defs/OpaqueId" },
+        "contentDigest": { "$ref": "common.schema.json#/$defs/Sha256Digest" },
+        "contentType": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "byteLength": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "durationMs": { "$ref": "common.schema.json#/$defs/PositiveU64" }
+      }
+    },
+    "AttemptLease": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "requestId",
+        "processingJobId",
+        "attemptId",
+        "attemptNumber",
+        "generation",
+        "leaseId",
+        "leaseRevision",
+        "claimedAt",
+        "leaseExpiresAt",
+        "input",
+        "pipeline"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.attempt-lease.v1" },
+        "requestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "attemptId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "attemptNumber": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "generation": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "leaseId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "leaseRevision": { "$ref": "common.schema.json#/$defs/U64" },
+        "claimedAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+        "leaseExpiresAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+        "input": { "$ref": "#/$defs/WorkerInput" },
+        "pipeline": { "$ref": "common.schema.json#/$defs/Pipeline" }
+      },
+      "description": "The object handle is app-scoped input authority for this worker lease. It is not an Astrale credential and must not be logged or forwarded."
+    },
+    "RenewLeaseRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "requestId",
+        "processingJobId",
+        "attemptId",
+        "generation",
+        "leaseId",
+        "expectedLeaseRevision"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.renew-lease.v1" },
+        "requestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "attemptId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "generation": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "leaseId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "expectedLeaseRevision": { "$ref": "common.schema.json#/$defs/U64" }
+      }
+    },
+    "LeaseRenewedResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "requestId",
+        "processingJobId",
+        "attemptId",
+        "generation",
+        "leaseId",
+        "leaseRevision",
+        "leaseExpiresAt"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.lease-renewed.v1" },
+        "requestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "attemptId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "generation": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "leaseId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "leaseRevision": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "leaseExpiresAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+      }
+    },
+    "ArtifactResultFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact", "provenance", "language", "timing", "segments"],
+      "properties": {
+        "artifact": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stagedArtifactHandle", "contentDigest", "byteLength", "contentType"],
+          "properties": {
+            "stagedArtifactHandle": {
+              "$ref": "common.schema.json#/$defs/OpaqueId",
+              "description": "App-owned staging identity produced by a provider adapter. It is not a provider URI, callback credential, or provider payload."
+            },
+            "contentDigest": { "$ref": "common.schema.json#/$defs/Sha256Digest" },
+            "byteLength": { "$ref": "common.schema.json#/$defs/DerivedArtifactByteLength" },
+            "contentType": { "const": "application/vnd.gumi.transcript+json" }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["providerId", "model", "modelVersion"],
+          "properties": {
+            "providerId": { "$ref": "common.schema.json#/$defs/StableSlug" },
+            "model": { "type": "string", "minLength": 1, "maxLength": 160 },
+            "modelVersion": { "type": "string", "minLength": 1, "maxLength": 160 }
+          }
+        },
+        "language": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tag", "basis"],
+          "properties": {
+            "tag": { "$ref": "common.schema.json#/$defs/LanguageTag" },
+            "basis": { "enum": ["requested", "detected", "provider-default"] }
+          }
+        },
+        "timing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["providerStartedAt", "providerCompletedAt", "mediaDurationMs"],
+          "properties": {
+            "providerStartedAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+            "providerCompletedAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+            "mediaDurationMs": { "$ref": "common.schema.json#/$defs/PositiveU64" }
+          }
+        },
+        "segments": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "timedCount"],
+          "properties": {
+            "count": { "$ref": "common.schema.json#/$defs/U64" },
+            "timedCount": { "$ref": "common.schema.json#/$defs/U64" },
+            "firstStartMs": { "$ref": "common.schema.json#/$defs/U64" },
+            "lastEndMs": { "$ref": "common.schema.json#/$defs/U64" }
+          }
+        }
+      },
+      "description": "Only bounded integrity and provenance facts cross the callback boundary. Transcript text, word content, provider response bodies, confidence arrays, and credentials are forbidden."
+    },
+    "RetryableCompletionFailure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "code": {
+          "enum": [
+            "PROVIDER_TIMEOUT",
+            "PROVIDER_RATE_LIMITED",
+            "PROVIDER_UNAVAILABLE",
+            "TRANSIENT_PROVIDER_FAILURE"
+          ]
+        },
+        "retryAfterSeconds": {
+          "allOf": [
+            { "$ref": "common.schema.json#/$defs/PositiveU64" },
+            { "pattern": "^(?:[1-9][0-9]{0,3}|[1-7][0-9]{4}|8[0-5][0-9]{3}|86[0-3][0-9]{2}|86400)$" }
+          ]
+        }
+      }
+    },
+    "PermanentCompletionFailure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "code": {
+          "enum": [
+            "PROVIDER_INVALID_INPUT",
+            "PROVIDER_OUTPUT_INVALID",
+            "PROVIDER_POLICY_REJECTED",
+            "PROVIDER_CANCELED",
+            "PERMANENT_PROVIDER_FAILURE"
+          ]
+        }
+      }
+    },
+    "CompleteAttemptRequest": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "callbackId",
+            "processingJobId",
+            "attemptId",
+            "generation",
+            "outcome",
+            "result"
+          ],
+          "properties": {
+            "schemaVersion": { "const": "gumi.media-processing.complete-attempt.v1" },
+            "callbackId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "attemptId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "generation": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+            "outcome": { "const": "succeeded" },
+            "result": { "$ref": "#/$defs/ArtifactResultFacts" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "callbackId",
+            "processingJobId",
+            "attemptId",
+            "generation",
+            "outcome",
+            "failure"
+          ],
+          "properties": {
+            "schemaVersion": { "const": "gumi.media-processing.complete-attempt.v1" },
+            "callbackId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "attemptId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "generation": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+            "outcome": { "const": "retryable-failure" },
+            "failure": { "$ref": "#/$defs/RetryableCompletionFailure" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "callbackId",
+            "processingJobId",
+            "attemptId",
+            "generation",
+            "outcome",
+            "failure"
+          ],
+          "properties": {
+            "schemaVersion": { "const": "gumi.media-processing.complete-attempt.v1" },
+            "callbackId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "attemptId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "generation": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+            "outcome": { "const": "permanent-failure" },
+            "failure": { "$ref": "#/$defs/PermanentCompletionFailure" }
+          }
+        }
+      ]
+    },
+    "AttemptCompletedResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "callbackId",
+        "processingJobId",
+        "attemptId",
+        "generation",
+        "disposition",
+        "jobState",
+        "completedAt"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.attempt-completed.v1" },
+        "callbackId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "attemptId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "generation": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "disposition": { "enum": ["committed", "already-committed"] },
+        "jobState": { "enum": ["retryable", "failed", "succeeded"] },
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["artifactId", "inputContentDigest", "outputContentDigest"],
+          "properties": {
+            "artifactId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "inputContentDigest": { "$ref": "common.schema.json#/$defs/Sha256Digest" },
+            "outputContentDigest": { "$ref": "common.schema.json#/$defs/Sha256Digest" }
+          }
+        },
+        "completedAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+      }
+    }
+  }
+}

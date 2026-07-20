@@ -1,0 +1,12 @@
+{
+  "type": "/problems/content-digest-mismatch",
+  "title": "Received bytes do not match the declared digest",
+  "status": 422,
+  "code": "CONTENT_DIGEST_MISMATCH",
+  "detail": "The exact request body hashed to a different SHA-256 digest and was not acknowledged.",
+  "traceId": "0190c6f0-7b21-7a40-8b11-00000000000d",
+  "details": {
+    "declaredDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "computedDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  }
+}

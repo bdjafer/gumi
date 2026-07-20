@@ -1,0 +1,39 @@
+diff --git a/omi/firmware/omi/omi.conf b/omi/firmware/omi/omi.conf
+--- a/omi/firmware/omi/omi.conf
++++ b/omi/firmware/omi/omi.conf
+@@ -166,8 +166,10 @@ CONFIG_BT_DEVICE_NAME="Omi"
+ CONFIG_BT_DIS_MODEL="Omi CV 1"
+ CONFIG_BT_DIS_MANUF="Based Hardware"
+ CONFIG_BT_DIS_FW_REV=y
++CONFIG_BT_DIS_SW_REV=y
+ CONFIG_BT_DIS_HW_REV=y
+ CONFIG_BT_DIS_FW_REV_STR="3.0.12"
++CONFIG_BT_DIS_SW_REV_STR="gumi-canary-0001"
+ CONFIG_BT_DIS_HW_REV_STR="5.0"
+ 
+ #
+diff --git a/omi/firmware/omi/src/main.c b/omi/firmware/omi/src/main.c
+--- a/omi/firmware/omi/src/main.c
++++ b/omi/firmware/omi/src/main.c
+@@ -48,10 +48,17 @@ static void mic_handler(int16_t *buffer)
+ 
+ static void boot_led_sequence(void)
+ {
+-    // Quick blue pulse = "I'm alive, booting..."
+-    set_led_blue(true);
+-    k_msleep(300);
+-    led_off();
++    // Gumi canary identity only: three short magenta pulses before any microphone startup.
++    for (int pulse = 0; pulse < 3; pulse++) {
++        set_led_red(true);
++        set_led_blue(true);
++        k_msleep(120);
++        led_off();
++
++        if (pulse < 2) {
++            k_msleep(80);
++        }
++    }
+ }
+ 
+ static void boot_ready_sequence(void)

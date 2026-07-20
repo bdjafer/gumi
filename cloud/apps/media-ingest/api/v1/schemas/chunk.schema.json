@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gumi.astrale.ai/schemas/media-ingest/v1/chunk.schema.json",
+  "title": "Gumi media ingest v1 chunk payloads",
+  "$defs": {
+    "ChunkDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Canonical normalization of the chunk path, metadata headers, and exact body integrity facts. Its RFC 8785 digest binds every durable metadata field in an acknowledgement.",
+      "required": [
+        "schemaVersion",
+        "ingestSessionId",
+        "streamId",
+        "chunkId",
+        "sequenceRange",
+        "payloadBytes",
+        "payloadFormat",
+        "contentDigest",
+        "codecConfigurationId",
+        "sourceStartedAt",
+        "sourceRetransmission"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-ingest.chunk.v1" },
+        "ingestSessionId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "streamId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "chunkId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "sequenceRange": { "$ref": "./common.schema.json#/$defs/SequenceRange" },
+        "payloadBytes": { "$ref": "./common.schema.json#/$defs/PositiveU64" },
+        "payloadFormat": { "const": "ogg-opus-page-fragment-v1" },
+        "contentDigest": { "$ref": "./common.schema.json#/$defs/Sha256Digest" },
+        "codecConfigurationId": {
+          "$ref": "./common.schema.json#/$defs/CodecConfigurationId"
+        },
+        "sourceStartedAt": { "$ref": "./common.schema.json#/$defs/Timestamp" },
+        "edgeReceivedAt": { "$ref": "./common.schema.json#/$defs/Timestamp" },
+        "sourceRetransmission": {
+          "type": "boolean",
+          "description": "Evidence that the source/device retransmitted the frame range. HTTP retries MUST preserve this value."
+        },
+        "sourceDiscontinuityBefore": {
+          "$ref": "#/$defs/SourceDiscontinuity",
+          "description": "Physical-source loss before this otherwise contiguous transfer range. It does not excuse an ingest sequence gap."
+        }
+      }
+    },
+    "SourceDiscontinuity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "droppedFrameCount"],
+      "properties": {
+        "reason": { "$ref": "./common.schema.json#/$defs/DiscontinuityReason" },
+        "droppedFrameCount": { "$ref": "./common.schema.json#/$defs/U64" }
+      }
+    },
+    "DurableAck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "ingestSessionId",
+        "streamId",
+        "acknowledgedChunkId",
+        "acknowledgedContentDigest",
+        "acknowledgedDescriptorDigest",
+        "acknowledgedSequenceRange",
+        "disposition",
+        "committedRanges",
+        "missingRanges",
+        "accountedRange",
+        "durableThrough",
+        "stateRevision",
+        "sessionState",
+        "acknowledgedAt"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-ingest.ack.v1" },
+        "ingestSessionId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "streamId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "acknowledgedChunkId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "acknowledgedContentDigest": {
+          "$ref": "./common.schema.json#/$defs/Sha256Digest"
+        },
+        "acknowledgedDescriptorDigest": {
+          "$ref": "./common.schema.json#/$defs/Sha256Digest",
+          "description": "SHA-256 of the RFC 8785 canonical ChunkDescriptor, binding payload length, codec configuration, source timestamps, retransmission evidence, and discontinuity evidence in addition to the body digest."
+        },
+        "acknowledgedSequenceRange": {
+          "$ref": "./common.schema.json#/$defs/SequenceRange"
+        },
+        "disposition": { "enum": ["stored", "duplicate"] },
+        "committedRanges": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "./common.schema.json#/$defs/SequenceRange" }
+        },
+        "missingRanges": {
+          "type": "array",
+          "items": { "$ref": "./common.schema.json#/$defs/SequenceRange" }
+        },
+        "accountedRange": {
+          "$ref": "./common.schema.json#/$defs/SequenceRange",
+          "description": "sequencePolicy.first through the greatest observed last sequence. missingRanges partition only this range, not future authorized sequences."
+        },
+        "durableThrough": {
+          "oneOf": [
+            { "$ref": "./common.schema.json#/$defs/U64" },
+            { "type": "null" }
+          ]
+        },
+        "stateRevision": { "$ref": "./common.schema.json#/$defs/U64" },
+        "sessionState": { "enum": ["open", "finalizing", "finalized"] },
+        "acknowledgedAt": { "$ref": "./common.schema.json#/$defs/Timestamp" }
+      }
+    }
+  }
+}

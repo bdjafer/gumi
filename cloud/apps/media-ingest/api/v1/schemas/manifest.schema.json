@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gumi.astrale.ai/schemas/media-ingest/v1/manifest.schema.json",
+  "title": "Gumi media ingest v1 immutable media manifest",
+  "$defs": {
+    "ExpectedStream": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Terminal declaration for one session stream. expectedRange.first MUST equal its authorized sequencePolicy.first; its last MUST cover every durable sequence and MUST NOT exceed maximumLast.",
+      "required": [
+        "streamId",
+        "expectedRange",
+        "expectedChunkCount",
+        "expectedByteLength",
+        "expectedContentDigest"
+      ],
+      "properties": {
+        "streamId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "expectedRange": { "$ref": "./common.schema.json#/$defs/SequenceRange" },
+        "expectedChunkCount": { "$ref": "./common.schema.json#/$defs/PositiveU64" },
+        "expectedByteLength": { "$ref": "./common.schema.json#/$defs/PositiveU64" },
+        "expectedContentDigest": {
+          "$ref": "./common.schema.json#/$defs/Sha256Digest"
+        }
+      }
+    },
+    "FinalizationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "streams MUST contain every stream declared at session creation exactly once, with no duplicate streamId and no omitted or foreign stream.",
+      "required": ["schemaVersion", "requestId", "streams"],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-ingest.finalize.v1" },
+        "requestId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "streams": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/ExpectedStream" }
+        }
+      }
+    },
+    "Discontinuity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atSequence", "reason", "droppedFrameCount"],
+      "properties": {
+        "atSequence": { "$ref": "./common.schema.json#/$defs/U64" },
+        "reason": {
+          "$ref": "./common.schema.json#/$defs/DiscontinuityReason"
+        },
+        "droppedFrameCount": { "$ref": "./common.schema.json#/$defs/U64" }
+      }
+    },
+    "MediaObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mediaObjectId",
+        "contentType",
+        "byteLength",
+        "contentDigest"
+      ],
+      "properties": {
+        "mediaObjectId": {
+          "$ref": "./common.schema.json#/$defs/UuidV7",
+          "description": "Opaque data-plane handle. It is never a provider URI or signed URL."
+        },
+        "contentType": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "byteLength": { "$ref": "./common.schema.json#/$defs/PositiveU64" },
+        "contentDigest": { "$ref": "./common.schema.json#/$defs/Sha256Digest" }
+      }
+    },
+    "MediaStreamManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "streamId",
+        "kind",
+        "sequenceRange",
+        "committedRanges",
+        "chunkCount",
+        "codec",
+        "oggLayout",
+        "startedAt",
+        "endedAt",
+        "durationMs",
+        "discontinuities",
+        "object"
+      ],
+      "properties": {
+        "streamId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "kind": { "const": "audio" },
+        "sequenceRange": { "$ref": "./common.schema.json#/$defs/SequenceRange" },
+        "committedRanges": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "./common.schema.json#/$defs/SequenceRange" }
+        },
+        "chunkCount": { "$ref": "./common.schema.json#/$defs/PositiveU64" },
+        "codec": { "$ref": "./common.schema.json#/$defs/AudioCodec" },
+        "oggLayout": { "$ref": "./common.schema.json#/$defs/OggOpusLayout" },
+        "startedAt": {
+          "$ref": "./common.schema.json#/$defs/UtcTimestamp",
+          "description": "UTC normalization of sourceStartedAt on the chunk containing sequencePolicy.first."
+        },
+        "endedAt": {
+          "$ref": "./common.schema.json#/$defs/UtcTimestamp",
+          "description": "startedAt plus durationMs, expressed in UTC. Physical-source loss is represented separately as discontinuities."
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400000,
+          "description": "Floor of playable Ogg Opus granule duration in milliseconds after pre-skip. It need not equal physical wall-clock elapsed time when a source discontinuity is present."
+        },
+        "discontinuities": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Discontinuity" }
+        },
+        "object": { "$ref": "#/$defs/MediaObject" }
+      }
+    },
+    "MediaManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "manifestId",
+        "ingestSessionId",
+        "captureSessionId",
+        "deviceId",
+        "edgeHostId",
+        "primaryStreamId",
+        "createdAt",
+        "finalizedAt",
+        "streams"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-manifest.v1" },
+        "manifestId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "ingestSessionId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "captureSessionId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "deviceId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "edgeHostId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "primaryStreamId": {
+          "$ref": "./common.schema.json#/$defs/UuidV7",
+          "description": "Must name exactly one member of streams. The v1 semantic projection is derived from this stream."
+        },
+        "createdAt": { "$ref": "./common.schema.json#/$defs/UtcTimestamp" },
+        "finalizedAt": { "$ref": "./common.schema.json#/$defs/UtcTimestamp" },
+        "streams": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/MediaStreamManifest" }
+        }
+      }
+    },
+    "FinalizationResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "requestId",
+        "disposition",
+        "manifestDigest",
+        "manifest"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-ingest.finalized.v1" },
+        "requestId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "disposition": { "enum": ["finalized", "already-finalized"] },
+        "manifestDigest": {
+          "$ref": "./common.schema.json#/$defs/Sha256Digest",
+          "description": "SHA-256 of the UTF-8 bytes produced by applying RFC 8785 JSON Canonicalization Scheme to the manifest value."
+        },
+        "manifest": { "$ref": "#/$defs/MediaManifest" }
+      }
+    },
+    "ImmutableManifestProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Digest-bound, read-only semantic projection of one finalized primary audio stream, including its capture, device, and edge-host binding. This is the only media-ingest payload imported by the Gumi Astrale application.",
+      "required": [
+        "schemaVersion",
+        "manifestId",
+        "manifestDigest",
+        "captureSessionId",
+        "deviceId",
+        "edgeHostId",
+        "primaryStreamId",
+        "objectHandle",
+        "objectContentDigest",
+        "objectByteLength",
+        "objectContentType",
+        "sequenceStart",
+        "sequenceEndExclusive",
+        "codec",
+        "sampleRateHz",
+        "channels",
+        "startedAt",
+        "endedAt",
+        "durationMs"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-ingest.immutable-manifest-projection.v1" },
+        "manifestId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "manifestDigest": {
+          "$ref": "./common.schema.json#/$defs/Sha256Digest",
+          "description": "Digest of the canonical stream-level MediaManifest, not of this projection."
+        },
+        "captureSessionId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "deviceId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "edgeHostId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "primaryStreamId": { "$ref": "./common.schema.json#/$defs/UuidV7" },
+        "objectHandle": { "$ref": "./common.schema.json#/$defs/OpaqueMediaHandle" },
+        "objectContentDigest": {
+          "$ref": "./common.schema.json#/$defs/Sha256Digest",
+          "description": "SHA-256 of the exact immutable primary-object bytes resolved by objectHandle."
+        },
+        "objectByteLength": {
+          "$ref": "./common.schema.json#/$defs/PositiveU64",
+          "description": "Exact immutable primary-object byte length, encoded as a canonical decimal u64 string."
+        },
+        "objectContentType": {
+          "const": "audio/ogg; codecs=opus",
+          "description": "Exact media type of the immutable primary object."
+        },
+        "sequenceStart": { "$ref": "./common.schema.json#/$defs/U64" },
+        "sequenceEndExclusive": {
+          "$ref": "./common.schema.json#/$defs/U64ExclusiveBoundary"
+        },
+        "codec": { "const": "opus" },
+        "sampleRateHz": {
+          "type": "integer",
+          "minimum": 8000,
+          "maximum": 48000
+        },
+        "channels": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2
+        },
+        "startedAt": { "$ref": "./common.schema.json#/$defs/UtcTimestamp" },
+        "endedAt": { "$ref": "./common.schema.json#/$defs/UtcTimestamp" },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400000
+        }
+      }
+    }
+  }
+}

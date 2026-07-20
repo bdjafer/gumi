@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "gumi.media-processing.derived-artifact-projection.v1",
+  "processingJobId": "0190c6f0-7b21-7a40-8b11-000000000064",
+  "artifactId": "0190c6f0-7b21-7a40-8b11-000000000067",
+  "artifactHandle": "gumi-derived:artifact/0190c6f0-7b21-7a40-8b11-000000000067",
+  "input": {
+    "manifestId": "0190c6f0-7b21-7a40-8b11-000000000001",
+    "manifestDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "contentDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "output": {
+    "contentDigest": "sha256:f7575be37d9f7304dda07f5b1e67c92f114a360a6a082b717a5f4525cf1edb8a",
+    "byteLength": "123",
+    "contentType": "application/vnd.gumi.transcript+json"
+  },
+  "provenance": {
+    "pipelineId": "transcription.v1",
+    "configurationDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "providerId": "fixture-provider",
+    "model": "fixture-transcribe",
+    "modelVersion": "2026-07-19",
+    "attemptId": "0190c6f0-7b21-7a40-8b11-000000000065",
+    "generation": "1",
+    "language": {
+      "tag": "en-US",
+      "basis": "requested"
+    },
+    "timing": {
+      "providerStartedAt": "2026-07-19T20:00:01Z",
+      "providerCompletedAt": "2026-07-19T20:00:03Z",
+      "mediaDurationMs": "60000"
+    },
+    "segments": {
+      "count": "0",
+      "timedCount": "0"
+    }
+  },
+  "committedAt": "2026-07-19T20:00:00Z"
+}

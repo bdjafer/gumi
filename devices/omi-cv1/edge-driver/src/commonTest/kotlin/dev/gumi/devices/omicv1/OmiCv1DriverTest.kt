@@ -18,7 +18,9 @@ class OmiCv1DriverTest {
         )
 
         assertEquals(MatchConfidence.EXACT, driver.match(endpoint).confidence)
-        assertEquals(8, driver.describe(endpoint).capabilities.size)
+        val metadata = driver.describe(endpoint)
+        assertEquals("not-negotiated", metadata.protocolVersion)
+        assertEquals(0, metadata.capabilities.size)
     }
 
     @Test

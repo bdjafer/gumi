@@ -1,0 +1,622 @@
+{
+  "schema": "gumi.device-human-io-contract/v1",
+  "protocol": "gumi.omi-cv1-human-io/v1",
+  "status": "proposed_unqualified",
+  "owner": "devices/omi-cv1",
+  "governed_by": "docs/specs/device-human-io-contract.md",
+  "evidence": {
+    "stock_source": [
+      {
+        "tag": "Omi_CV1_v3.0.12",
+        "commit": "85159556eac753a088c5efd1b419a5a867508e27",
+        "facts": [
+          "microphone_started_during_boot",
+          "single_tap_calls_shutdown",
+          "system_off_intends_button_gpio_level_low_wake",
+          "long_press_threshold_ms_1000_notifies_only",
+          "red_blue_green_have_non_privacy_meanings"
+        ]
+      },
+      {
+        "tag": "Omi_CV1_v3.0.20",
+        "commit": "aa1133cd17139aa09cbe4883cdf51f15094b9916",
+        "facts": [
+          "microphone_started_during_boot",
+          "long_press_threshold_ms_3000_calls_shutdown",
+          "red_blue_green_have_non_privacy_meanings"
+        ]
+      }
+    ],
+    "owned_unit_bench": {
+      "firmware": "3.0.12",
+      "hardware": "5.0",
+      "profile": "devices/omi-cv1/protocols/gatt/v3.0.12/profile.json",
+      "established": [
+        "button_read_notify_characteristic_present",
+        "haptic_write_characteristic_present",
+        "link_not_bonded_during_inventory",
+        "live_audio_metadata_qualified_while_not_bonded",
+        "off_state_did_not_wake_from_button_and_charger_insertion_recovered"
+      ],
+      "pending": [
+        "off_transition_trigger_and_elapsed_time",
+        "stock_button_wake_failure_root_cause",
+        "charger_wake_electrical_path",
+        "gesture_behavior",
+        "gesture_timing",
+        "indicator_behavior",
+        "indicator_visibility",
+        "physical_rgb_package_mapping",
+        "haptic_strength",
+        "haptic_pattern_distinguishability",
+        "microphone_state_during_stock_idle"
+      ]
+    },
+    "target_behavior_evidence_level": "proposed"
+  },
+  "state_axes": {
+    "power": [
+      "off",
+      "booting",
+      "operational",
+      "shutting_down"
+    ],
+    "mic_truth": [
+      "verified_off",
+      "acquiring",
+      "acquired",
+      "releasing",
+      "unknown"
+    ],
+    "acoustic_detector": [
+      "disarmed",
+      "armed"
+    ],
+    "base_recording": [
+      "inactive",
+      "active"
+    ],
+    "voice_turn": [
+      "inactive",
+      "starting",
+      "active",
+      "ending",
+      "failed"
+    ],
+    "link": [
+      "disconnected",
+      "connecting",
+      "authenticating",
+      "ready",
+      "degraded"
+    ],
+    "maintenance": [
+      "normal",
+      "pairing",
+      "awaiting_confirmation",
+      "updating",
+      "validating",
+      "recovery_required"
+    ],
+    "storage": [
+      "healthy",
+      "low",
+      "full",
+      "corrupt"
+    ],
+    "fault": [
+      "none",
+      "warning",
+      "recoverable",
+      "fatal_privacy"
+    ]
+  },
+  "composition": {
+    "voice_turn_overlays_base_recording": true,
+    "release_returns_to_same_base_recording": true,
+    "sync_is_not_capture_state": true,
+    "cloud_state_is_not_capture_truth": true,
+    "boot_never_resumes_capture": true
+  },
+  "timing_ms": {
+    "debounce_stable": 30,
+    "double_tap_window_after_first_release": 350,
+    "double_tap_window_inclusive": true,
+    "hold_deadline_after_press": 500,
+    "hold_deadline_inclusive": true,
+    "same_timestamp_precedence": [
+      "accepted_button_edges",
+      "gesture_deadlines"
+    ],
+    "maintenance_confirmation_hold": 2000,
+    "maintenance_confirmation_lease": 15000,
+    "maintenance_confirmation_lease_expiry_inclusive": false,
+    "pairing_signal_timeout": 60000
+  },
+  "gesture_events": [
+    "single_tap",
+    "double_tap",
+    "hold_committed",
+    "hold_released"
+  ],
+  "gesture_mapping": {
+    "normal_idle": {
+      "single_tap": "repeat_status",
+      "double_tap": "start_base_recording",
+      "hold_committed": "start_voice_turn_if_admitted",
+      "hold_released": "end_voice_turn"
+    },
+    "normal_recording": {
+      "single_tap": "repeat_status",
+      "double_tap": "stop_base_recording",
+      "hold_committed": "start_voice_turn_overlay_if_admitted",
+      "hold_released": "end_voice_turn_and_return_to_base_recording"
+    },
+    "awaiting_confirmation": {
+      "single_tap": "no_state_change",
+      "double_tap": "no_state_change",
+      "hold_committed": "no_state_change",
+      "contextual_hold_2000_ms": "confirm_disclosed_operation"
+    },
+    "maintenance_exclusive": {
+      "single_tap": "repeat_maintenance_or_fault_status",
+      "double_tap": "ignored",
+      "hold_committed": "ignored_unless_disclosed_recovery_step_owns_input"
+    },
+    "fatal_privacy": {
+      "single_tap": "repeat_fault_status",
+      "double_tap": "ignored",
+      "hold_committed": "ignored"
+    },
+    "off": {
+      "first_qualified_press": "wake",
+      "remaining_gesture_interpretation": "disabled_until_operational"
+    }
+  },
+  "normal_mode_power_gesture": null,
+  "off_state_wake_policy": {
+    "required_normal_wake_source": "qualified_button_press",
+    "charger_insertion": "permitted_recovery_source_but_never_required_for_normal_wake",
+    "normal_wake_forbidden_dependencies": [
+      "bond",
+      "pairing",
+      "active_ble_link",
+      "edge_reachability",
+      "cloud_reachability",
+      "charger_connection"
+    ],
+    "post_wake_power": "booting",
+    "post_wake_mic_truth": "verified_off",
+    "automatic_capture_resume": false
+  },
+  "gesture_rules": {
+    "no_capture_while_resolving_tap_or_hold": true,
+    "second_press_held_to_deadline_becomes_hold": true,
+    "preceding_tap_discarded_when_second_press_becomes_hold": true,
+    "physical_stop_is_local": true,
+    "stop_and_safety_precede_start": true,
+    "voice_turn_requires_authenticated_realtime_admission_lease": true,
+    "voice_turn_refusal_preserves_mic_and_base_recording": true
+  },
+  "indicator": {
+    "logical_channels": [
+      "red",
+      "green",
+      "blue"
+    ],
+    "physical_mapping": "one_logical_rgb_pending_bench_confirmation",
+    "privacy_floor": "hil_calibrated_firmware_constant",
+    "user_dimming_may_lower_privacy_floor": false,
+    "patterns": {
+      "privacy_recording": {
+        "repeat": "continuous",
+        "segments": [
+          {
+            "duration_ms": null,
+            "red": "privacy_floor_or_higher",
+            "green": 0,
+            "blue": 0
+          }
+        ]
+      },
+      "privacy_voice_turn": {
+        "repeat": "continuous",
+        "red_base": "privacy_floor_or_higher",
+        "blue_modulation_hz": 2,
+        "red_may_turn_off": false
+      },
+      "privacy_unknown": {
+        "repeat": "continuous",
+        "segments": [
+          {
+            "duration_ms": null,
+            "red": "privacy_floor_or_higher",
+            "green": 0,
+            "blue": 0
+          }
+        ]
+      },
+      "booting": {
+        "repeat": 1,
+        "segments": [
+          {
+            "duration_ms": 200,
+            "color": "blue",
+            "level": "status"
+          },
+          {
+            "duration_ms": 200,
+            "color": "off"
+          },
+          {
+            "duration_ms": 200,
+            "color": "blue",
+            "level": "status"
+          }
+        ]
+      },
+      "pairing": {
+        "repeat_until_ms": 60000,
+        "segments": [
+          {
+            "duration_ms": 250,
+            "color": "blue",
+            "level": "status"
+          },
+          {
+            "duration_ms": 250,
+            "color": "off"
+          }
+        ]
+      },
+      "updating": {
+        "repeat": "until_state_exit",
+        "cycle_ms": 2000,
+        "shape": "breathe",
+        "color": "blue",
+        "level": "status"
+      },
+      "validating": {
+        "repeat": "until_state_exit",
+        "segments": [
+          {
+            "duration_ms": 150,
+            "color": "blue",
+            "level": "status"
+          },
+          {
+            "duration_ms": 150,
+            "color": "off"
+          },
+          {
+            "duration_ms": 150,
+            "color": "blue",
+            "level": "status"
+          },
+          {
+            "duration_ms": 1500,
+            "color": "off"
+          }
+        ]
+      },
+      "recovery_required": {
+        "repeat": "until_state_exit",
+        "segments": [
+          {
+            "duration_ms": 300,
+            "color": "amber",
+            "level": "status"
+          },
+          {
+            "duration_ms": 300,
+            "color": "off"
+          },
+          {
+            "duration_ms": 300,
+            "color": "amber",
+            "level": "status"
+          },
+          {
+            "duration_ms": 2400,
+            "color": "off"
+          }
+        ]
+      },
+      "recoverable_fault": {
+        "repeat": "until_acknowledged_or_state_exit",
+        "segments": [
+          {
+            "duration_ms": 150,
+            "color": "amber",
+            "level": "status"
+          },
+          {
+            "duration_ms": 150,
+            "color": "off"
+          },
+          {
+            "duration_ms": 150,
+            "color": "amber",
+            "level": "status"
+          },
+          {
+            "duration_ms": 150,
+            "color": "off"
+          },
+          {
+            "duration_ms": 150,
+            "color": "amber",
+            "level": "status"
+          },
+          {
+            "duration_ms": 2000,
+            "color": "off"
+          }
+        ]
+      },
+      "charging": {
+        "repeat": "while_idle_and_charging",
+        "segments": [
+          {
+            "duration_ms": 200,
+            "color": "green",
+            "level": "status"
+          },
+          {
+            "duration_ms": 3800,
+            "color": "off"
+          }
+        ]
+      },
+      "low_power": {
+        "repeat": "while_idle_and_low_power",
+        "segments": [
+          {
+            "duration_ms": 200,
+            "color": "amber",
+            "level": "status"
+          },
+          {
+            "duration_ms": 9800,
+            "color": "off"
+          }
+        ]
+      },
+      "ready_link_status": {
+        "repeat": 1,
+        "segments": [
+          {
+            "duration_ms": 300,
+            "color": "blue",
+            "level": "status"
+          }
+        ]
+      },
+      "disconnected_status": {
+        "repeat": 1,
+        "segments": [
+          {
+            "duration_ms": 300,
+            "color": "amber",
+            "level": "status"
+          }
+        ]
+      }
+    }
+  },
+  "haptic": {
+    "driver_kind": "switched_erm",
+    "arbitrary_remote_duration_allowed": false,
+    "patterns": {
+      "ready": [
+        {
+          "on_ms": 80
+        }
+      ],
+      "voice_ready": [
+        {
+          "on_ms": 80
+        }
+      ],
+      "recording_started": [
+        {
+          "on_ms": 80
+        },
+        {
+          "off_ms": 70
+        },
+        {
+          "on_ms": 80
+        }
+      ],
+      "recording_stopped": [
+        {
+          "on_ms": 220
+        }
+      ],
+      "refused": [
+        {
+          "on_ms": 80
+        },
+        {
+          "off_ms": 70
+        },
+        {
+          "on_ms": 80
+        },
+        {
+          "off_ms": 70
+        },
+        {
+          "on_ms": 80
+        }
+      ],
+      "warning": [
+        {
+          "on_ms": 200
+        },
+        {
+          "off_ms": 100
+        },
+        {
+          "on_ms": 200
+        }
+      ],
+      "fault": [
+        {
+          "on_ms": 200
+        },
+        {
+          "off_ms": 100
+        },
+        {
+          "on_ms": 200
+        },
+        {
+          "off_ms": 100
+        },
+        {
+          "on_ms": 200
+        }
+      ],
+      "voice_result_ok": [
+        {
+          "on_ms": 80
+        },
+        {
+          "off_ms": 100
+        },
+        {
+          "on_ms": 220
+        }
+      ],
+      "voice_result_failed": [
+        {
+          "on_ms": 220
+        },
+        {
+          "off_ms": 120
+        },
+        {
+          "on_ms": 220
+        }
+      ],
+      "shutdown_committed": [
+        {
+          "on_ms": 300
+        }
+      ]
+    }
+  },
+  "feedback_arbitration": {
+    "single_writer": "firmware_feedback_arbiter",
+    "non_blocking": true,
+    "priority_high_to_low": [
+      "privacy_unknown_or_acquired",
+      "fatal_safety",
+      "recovery_update_pairing",
+      "recoverable_warning",
+      "power_charging",
+      "requested_status_link"
+    ],
+    "lower_priority_may_override_privacy": false,
+    "only_allowed_privacy_modulation": "privacy_voice_turn",
+    "haptic_is_never_sole_output": true,
+    "explicit_unqualified_limits": {
+      "simultaneous_low_power_and_charging": "unresolved_same_priority_requires_protocol_revision",
+      "privacy_output_driver_failed": "no_trustworthy_visual_signal_available_lock_out_lower_visual_patterns"
+    }
+  },
+  "shell_capture_labels": {
+    "verified_idle": "Microphone off — device confirmed",
+    "starting": "Starting capture…",
+    "recording_local": "Recording locally",
+    "recording_uploading": "Recording — uploading",
+    "recording_cloud_offline": "Recording — cloud offline, saved locally",
+    "voice_turn": "Listening for this voice turn",
+    "stopping": "Stopping — microphone may still be active",
+    "unknown": "Microphone state unknown — check the device privacy light"
+  },
+  "shell_rules": {
+    "connection_is_capture_truth": false,
+    "cloud_is_capture_truth": false,
+    "requested_state_is_acquired_state": false,
+    "disconnect_invalidates_verified_idle_immediately": true,
+    "last_known_recording_on_disconnect": "may_still_be_recording",
+    "multi_device_aggregation_order": [
+      "any_mic_active",
+      "any_mic_unknown_or_stale",
+      "all_fresh_verified_off"
+    ],
+    "projection_metadata": [
+      "authority",
+      "observed_at",
+      "freshness",
+      "pending_command_id"
+    ]
+  },
+  "lifecycle": {
+    "boot": "verified_off",
+    "watchdog_recovery": "verified_off_with_discontinuity",
+    "ota_boot": "verified_off_then_validating",
+    "off_button_wake": "booting_verified_off_without_bond_link_edge_cloud_or_charger",
+    "phone_process_death": "does_not_change_device_capture_truth",
+    "device_disconnect_during_recording": "continue_while_local_durability_is_qualified",
+    "cloud_loss": "does_not_change_local_capture_truth",
+    "storage_full_or_corrupt": "refuse_new_capture_and_stop_when_no_durable_route_remains",
+    "update_preconditions": [
+      "mic_verified_off",
+      "media_state_durable",
+      "power_policy_passed",
+      "exclusive_update_lease"
+    ],
+    "validation_failure": "recovery_required_without_capture_or_automatic_retry_loop",
+    "shutdown_order": [
+      "release_microphone",
+      "flush_media",
+      "emit_shutdown_committed",
+      "lights_off",
+      "power_off"
+    ]
+  },
+  "accessibility": {
+    "color_only_meaning_allowed": false,
+    "text_and_icon_required_in_shell": true,
+    "talkback_announces_semantic_transitions_only": true,
+    "minimum_touch_target_dp": 48,
+    "dynamic_type_required": true,
+    "high_contrast_required": true,
+    "reduced_motion_required": true,
+    "optional_haptic_may_be_disabled": true,
+    "privacy_and_safety_outputs_may_be_disabled": false,
+    "blind_pendant_confirmation_for_destructive_ai_action_allowed": false
+  },
+  "invariants": [
+    "mic_truth_not_verified_off_requires_continuous_privacy_guard_unless_guard_failure_is_forcing_release",
+    "privacy_output_failure_rejects_or_stops_capture",
+    "no_audio_frame_before_capture_commitment",
+    "single_or_double_tap_never_emits_voice_turn_frame",
+    "voice_turn_release_is_local",
+    "voice_turn_overlay_preserves_base_recording_identity",
+    "maintenance_excludes_capture",
+    "boot_reboot_and_ota_never_resume_capture",
+    "off_state_button_wake_does_not_require_bond_link_edge_cloud_or_charger",
+    "stale_or_disconnected_idle_is_not_rendered_as_verified_off",
+    "acoustic_detector_armed_does_not_imply_pcm_stream_or_retained_audio",
+    "participant_consent_is_separate_from_wearer_gesture_and_indicator"
+  ],
+  "qualification_gates": [
+    "deterministic_fixture_conformance",
+    "firmware_property_and_fault_injection_tests",
+    "simulator_driver_runtime_shell_conformance",
+    "worn_button_false_gesture_measurement",
+    "rgb_package_mapping_measurement",
+    "privacy_visibility_daylight_and_darkness",
+    "haptic_pattern_distinguishability",
+    "pdm_indicator_timing_measurement",
+    "power_impact_measurement",
+    "button_wake_from_off_without_charger",
+    "post_wake_microphone_off_and_no_capture_resume",
+    "accessibility_review"
+  ]
+}

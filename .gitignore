@@ -6,8 +6,10 @@
 # Editors and local tooling
 .idea/
 .vscode/
+.kotlin/
 *.swp
 .gradle/
+.pnpm-store/
 local.properties
 *.iml
 
@@ -33,3 +35,7 @@ captures/
 *.har
 *.pem
 *.key
+*.jks
+*.keystore
+*.p12
+*.pfx

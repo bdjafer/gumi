@@ -16,10 +16,16 @@ Important limitations:
   eight-byte `int[2]`; Gumi must not reuse that shape as a new cross-device protocol.
 - `read`/`write` permissions in this profile are not encrypted/authenticated permissions. The stock
   custom characteristics do not require link security at the attribute layer.
+- Audio notifications are not bare Opus packets. `transport.c` prefixes each fragment with a wrapping
+  little-endian `uint16_t` notification ID and `uint8_t` fragment index. The encoder buffer is bounded
+  to 160 bytes; ATT MTU 166 is therefore the minimum that proves the complete maximum plus the
+  envelope and ATT overhead fit without fragmentation. Physical negotiation and packet-boundary
+  evidence remain pending.
 
 Primary sources are the pinned
 [`transport.c`](https://github.com/BasedHardware/omi/blob/aa1133cd17139aa09cbe4883cdf51f15094b9916/omi/firmware/omi/src/lib/core/transport.c),
 [`storage.c`](https://github.com/BasedHardware/omi/blob/aa1133cd17139aa09cbe4883cdf51f15094b9916/omi/firmware/omi/src/lib/core/storage.c),
 [`button.c`](https://github.com/BasedHardware/omi/blob/aa1133cd17139aa09cbe4883cdf51f15094b9916/omi/firmware/omi/src/lib/core/button.c),
 [`haptic.c`](https://github.com/BasedHardware/omi/blob/aa1133cd17139aa09cbe4883cdf51f15094b9916/omi/firmware/omi/src/haptic.c),
+[`config.h`](https://github.com/BasedHardware/omi/blob/aa1133cd17139aa09cbe4883cdf51f15094b9916/omi/firmware/omi/src/lib/core/config.h),
 and [`omi.conf`](https://github.com/BasedHardware/omi/blob/aa1133cd17139aa09cbe4883cdf51f15094b9916/omi/firmware/omi/omi.conf).

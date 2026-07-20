@@ -1,0 +1,85 @@
+{
+  "schema": "gumi.omi-cv1.firmware-build-probe/v1",
+  "probe_id": "omi-cv1-v3012-codec-port-link-probe-0001",
+  "intent": "compile the session-scoped Gumi Opus codec port against the pinned Omi CV1 v3.0.12 Zephyr application and bundled Opus implementation",
+  "source": {
+    "upstream_tag": "Omi_CV1_v3.0.12",
+    "upstream_commit": "85159556eac753a088c5efd1b419a5a867508e27",
+    "overlay_patch": "patches/1003-zephyr-codec-port-link-probe.patch",
+    "overlay_patch_sha256": "44279967c984ed4106e34b211729de22580419470711bf2629f0c2a8d4afc597",
+    "files_sha256": {
+      "gumi/zephyr/omi-v3012/include/gumi/omi_v3012_codec.h": "9a3e2d14a15c0888b9d094908211f92b1b01cf9d8bcdd12664df55b88ae9e876",
+      "gumi/zephyr/omi-v3012/src/codec_port.c": "cbe12c61be029d6a212bb7bdeb65b8289fb29fec1b563aeea52f7dcae6d8dbe7",
+      "gumi/zephyr/omi-v3012/include/gumi/omi_v3012_mic.h": "922b054be612aae87539c273da97eb3d4e2c00d616598cdb398176d03fd7a09b",
+      "gumi/zephyr/omi-v3012/src/mic_port.c": "0a1eb9f8e9748724f6b13071e19645803ef02730f3f93faa1fa21461fb70eafc"
+    },
+    "materialized_application_sha256": {
+      "omi/firmware/omi/CMakeLists.txt": "f1be6de1ae45329d21eb07caab68be0cf0b1930e7bafb67b357c2209d9fb7112",
+      "omi/firmware/omi/omi.conf": "2ca433e204cf4293a2d7eeab77bd7a4058020b0313190c6909a35ba9f916609f"
+    },
+    "reused_library": {
+      "name": "Opus",
+      "source_path": "omi/firmware/omi/src/lib/core/lib/opus-1.2.1",
+      "vendored_by_upstream": true,
+      "reimplemented_by_gumi": false
+    }
+  },
+  "build": {
+    "ncs_version": "v2.9.0",
+    "zephyr_commit": "1f8f3dc291420c70cd39e77a5cdc954561d4a08f",
+    "zephyr_sdk": "0.17.0",
+    "toolchain_image": "ghcr.io/nrfconnect/sdk-nrf-toolchain:v2.9.0@sha256:7e9b61475ca05b8517079bedc8645479101fdaa17de2d0fa06a1633288112db2",
+    "network_access": false,
+    "software_revision": "gumi-codec-port-probe-0001",
+    "partition_map_sha256": "b455f45133912e7d5e2d27a0cb40c018620bd101d164b14d8e805e0c1a0f30f9",
+    "partition_map_matches_canonical_stock_build": true,
+    "codec_port_object": {
+      "size_bytes": 44532,
+      "sha256": "fdabf90b2d28395d1fde08a44df3f66d43f0e2d8a9e46e791e7354c3afe66376"
+    },
+    "mic_port_object": {
+      "size_bytes": 38944,
+      "sha256": "bf3cba20b2cb81fb651d34a56a5b5e45833db1bef11028a520c8291566b2445e"
+    },
+    "linker_map_sha256": "48a211de90de25dd932b509192558e798a00b605e4110c47c9e477ff4f11c3b7",
+    "linker_map_contains_codec_port_input": true,
+    "linker_map_contains_opus_input": true,
+    "unused_gumi_port_sections_were_garbage_collected": true
+  },
+  "quarantined_application_artifact": {
+    "unsigned_size_bytes": 227872,
+    "unsigned_sha256": "db886ebe4f606d61dca3378365aa46e16ddb852bbcb1970075188153c1dbd1ee",
+    "signed_size_bytes": 228720,
+    "signed_file_sha256": "209325a95d6927dcc1efb323120bdbdbe9a5f4c8bc5c9b07f48b024d5923575c",
+    "mcuboot_image_hash": "9ce50bd57cfe1ae376baf3c5afb29d7221874d863643bbc9b5b2b6e71a6e4eec",
+    "mcuboot_version": "0.0.0+0",
+    "signature_verified": true,
+    "stored_in_git": false
+  },
+  "qualification": {
+    "real_upstream_application_compile": "pass",
+    "codec_port_compiler_warnings": 0,
+    "standalone_build_verifier": "pass",
+    "performed_utc_date": "2026-07-19",
+    "device_was_contacted": false,
+    "hardware_in_loop_performed": false
+  },
+  "runtime_scope": {
+    "codec_port_is_invoked": false,
+    "behavior_remains_stock": true,
+    "stock_always_on_microphone_remains": true,
+    "session_reset_is_proven_on_hardware": false,
+    "successful_close_callback_barrier_is_proven_on_hardware": false,
+    "behavioral_candidate": false,
+    "physical_use_forbidden": true
+  },
+  "supersession": {
+    "superseded": true,
+    "reason": "the source was tightened after this successful link probe with exact close accounting and an unconditional self-join guard",
+    "current_header_sha256": "364880210dcf280c1717bc179300f752b937f39516743ffeefad9e2d73c46aee",
+    "current_source_sha256": "e9df0036d3efd9ed771311b24da30c9647b06e1011b70c7cb75af67e43d8fa20",
+    "current_source_target_build": "pending",
+    "current_source_emulator_gate": "pending"
+  },
+  "artifact_conveys_physical_authorization": false
+}

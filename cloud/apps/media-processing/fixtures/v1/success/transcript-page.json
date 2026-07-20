@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "gumi.media-processing.transcript-page.v1",
+  "processingJobId": "0190c6f0-7b21-7a40-8b11-000000000064",
+  "artifactId": "0190c6f0-7b21-7a40-8b11-000000000067",
+  "inputContentDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "outputContentDigest": "sha256:f7575be37d9f7304dda07f5b1e67c92f114a360a6a082b717a5f4525cf1edb8a",
+  "language": "en-US",
+  "mediaDurationMs": "60000",
+  "totalSegmentCount": "0",
+  "startIndex": "0",
+  "endIndexExclusive": "0",
+  "segments": []
+}

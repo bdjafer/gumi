@@ -82,7 +82,15 @@
             "read"
           ],
           "read_value": "empty",
-          "notification_encoding": "raw_opus_packet"
+          "notification_encoding": "omi_audio_envelope_v1",
+          "notification_envelope": {
+            "header_bytes": 3,
+            "sequence": "u16_little_endian_wrapping_notification_id",
+            "fragment_index": "u8_zero_for_unfragmented_packet",
+            "payload": "raw_opus_fragment",
+            "codec_output_max_bytes": 160,
+            "minimum_att_mtu_for_unfragmented_maximum": 166
+          }
         },
         {
           "name": "audio_codec",
@@ -225,7 +233,7 @@
           "permissions": [
             "write"
           ],
-          "encoding_contract": "../ring-v1/fixtures.json"
+          "encoding_contract": "../../ring/v1/fixtures.json"
         },
         {
           "name": "status",

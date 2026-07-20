@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gumi.dev/schemas/cloud/application-manifest.v1.json",
+  "title": "Gumi cloud application manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "appId",
+    "kind",
+    "owner",
+    "summary",
+    "durableAuthority",
+    "dataClasses",
+    "tenancy",
+    "contracts",
+    "dependencies",
+    "deployment",
+    "retention",
+    "runbook"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "../../catalog/application-manifest.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "appId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "kind": {
+      "enum": ["astrale-domain", "http-service", "realtime-service", "worker"]
+    },
+    "owner": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "durableAuthority": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+      }
+    },
+    "dataClasses": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "semantic-metadata",
+          "raw-media",
+          "derived-content",
+          "operational-metadata"
+        ]
+      }
+    },
+    "tenancy": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "sharedDeployment", "scopeSource"],
+          "properties": {
+            "mode": { "const": "astrale-instance" },
+            "sharedDeployment": { "const": false },
+            "scopeSource": { "const": "kernel-instance" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "sharedDeployment", "scopeSource"],
+          "properties": {
+            "mode": { "const": "dedicated-deployment" },
+            "sharedDeployment": { "const": false },
+            "scopeSource": { "const": "deployment-binding" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "sharedDeployment", "scopeSource"],
+          "properties": {
+            "mode": { "const": "authenticated-instance" },
+            "sharedDeployment": { "const": true },
+            "scopeSource": { "const": "authenticated-claim" }
+          }
+        }
+      ]
+    },
+    "contracts": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/contract" }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/dependency" }
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "target", "regions"],
+      "properties": {
+        "status": { "enum": ["local-only", "selected", "deployed"] },
+        "target": { "type": ["string", "null"] },
+        "regions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+        }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "class", "policyId"],
+      "properties": {
+        "status": { "enum": ["unselected", "defined", "enforced"] },
+        "class": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "maxLength": 64
+        },
+        "policyId": { "type": ["string", "null"] }
+      }
+    },
+    "runbook": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    }
+  },
+  "$defs": {
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "protocol", "version", "path"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "maxLength": 64
+        },
+        "protocol": {
+          "enum": ["astrale-domain", "http-openapi", "realtime"]
+        },
+        "version": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "path": { "type": "string", "minLength": 1, "maxLength": 160 }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appId", "contractId", "purpose"],
+      "properties": {
+        "appId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "maxLength": 64
+        },
+        "contractId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "maxLength": 64
+        },
+        "purpose": { "type": "string", "minLength": 1, "maxLength": 160 }
+      }
+    }
+  }
+}

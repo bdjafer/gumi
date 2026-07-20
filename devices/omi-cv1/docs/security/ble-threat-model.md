@@ -1,17 +1,22 @@
 # Omi CV1 stock-firmware BLE threat model
 
-Status: source-confirmed exposure analysis; physical-unit confirmation pending.
+Status: source-confirmed exposure analysis; owned v3.0.12 live-audio/no-bond prerequisite confirmed,
+adversarial control/storage/update confirmation deliberately pending.
 
 ## Verdict
 
-The stock v3.0.20 application is a useful compatibility base, not an acceptable Gumi security boundary.
-Its custom GATT attributes use ordinary `READ`/`WRITE` permissions rather than encrypted or authenticated
-permissions, and application code does not request link security after connection. Enabling Bluetooth's
-Security Manager in configuration is not the same as requiring a secure link.
+The installed stock v3.0.12 application—and later v3.0.20 compatibility candidate—are useful protocol
+bases, not acceptable Gumi security boundaries. Their custom GATT attributes use ordinary
+`READ`/`WRITE` permissions rather than encrypted or authenticated permissions, and application code does
+not request link security after connection. Enabling Bluetooth's Security Manager in configuration is
+not the same as requiring a secure link.
 
-The exact expected surface is in the
-[source-declared GATT profile](../../protocols/gatt/v3.0.20/README.md). The Android probe must
-confirm behavior on the owned unit before this is called a bench-proven vulnerability.
+The installed baseline is the [v3.0.12 GATT profile](../../protocols/gatt/v3.0.12/README.md); the
+[v3.0.20 profile](../../protocols/gatt/v3.0.20/README.md) is a separate migration reference. The owned
+unit allowed the bounded live-audio notification witness while Android reported `NOT_BONDED`, proving
+that a bond is not a prerequisite for that stock path. It does not independently prove the BLE link's
+encryption level, an attacker's subscription, or any control/storage/update write, which remain
+deliberately unexercised.
 
 ## Assets and nearby attacker
 
@@ -29,7 +34,7 @@ physical opening. The at-risk assets are:
 
 | Path | Source-level mechanism | Consequence |
 | --- | --- | --- |
-| Live eavesdropping | Subscribe to `19b10001-...` audio notifications; characteristic and CCC do not require encryption/authentication | Nearby client receives raw Opus packets while the microphone runs |
+| Live eavesdropping | Subscribe to `19b10001-...` audio notifications; characteristic and CCC do not require encryption/authentication | Nearby client receives the 3-byte stock envelope plus raw Opus fragments while the microphone runs |
 | Stored-audio exfiltration | Write ring info/read commands to `30295781-...`, then receive its data notifications | Nearby client can request unread ring records |
 | Stored-audio destruction | Write ring advance or clear commands to the same unprotected control characteristic | Read cursor can be moved or ring state cleared, causing data loss |
 | Timestamp corruption | Write a four-byte epoch to `19b10031-...` | Future recording evidence is assigned attacker-chosen time |

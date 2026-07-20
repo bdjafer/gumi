@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gumi.astrale.ai/schemas/media-processing/v1/job.schema.json",
+  "title": "Gumi media processing job control values",
+  "$defs": {
+    "CreateJobRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "requestId", "inputManifest", "pipeline"],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.create-job.v1" },
+        "requestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "inputManifest": { "$ref": "common.schema.json#/$defs/InputManifestReference" },
+        "pipeline": { "$ref": "common.schema.json#/$defs/Pipeline" }
+      }
+    },
+    "AttemptStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attemptId",
+        "attemptNumber",
+        "generation",
+        "state",
+        "leaseRevision",
+        "claimedAt",
+        "leaseExpiresAt",
+        "outcomeUnknown"
+      ],
+      "properties": {
+        "attemptId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "attemptNumber": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "generation": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "state": {
+          "enum": [
+            "leased",
+            "completing",
+            "succeeded",
+            "retryable-failure",
+            "permanent-failure",
+            "outcome-unknown",
+            "canceled"
+          ]
+        },
+        "leaseRevision": { "$ref": "common.schema.json#/$defs/U64" },
+        "claimedAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+        "leaseExpiresAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+        "completedAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+        "outcomeUnknown": { "type": "boolean" },
+        "failureCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$" },
+        "retryNotBefore": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+      }
+    },
+    "JobStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "processingJobId",
+        "createRequestId",
+        "state",
+        "generation",
+        "stateRevision",
+        "maxAttempts",
+        "input",
+        "pipeline",
+        "attempts",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.job-status.v1" },
+        "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "createRequestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "state": {
+          "enum": ["queued", "running", "completing", "retryable", "outcome-unknown", "succeeded", "failed", "canceled"]
+        },
+        "generation": { "$ref": "common.schema.json#/$defs/U64" },
+        "stateRevision": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "maxAttempts": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "input": { "$ref": "common.schema.json#/$defs/DigestBoundInput" },
+        "pipeline": { "$ref": "common.schema.json#/$defs/Pipeline" },
+        "attempts": {
+          "type": "array",
+          "maxItems": 10,
+          "items": { "$ref": "#/$defs/AttemptStatus" }
+        },
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["artifactId", "inputContentDigest", "outputContentDigest"],
+          "properties": {
+            "artifactId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "inputContentDigest": { "$ref": "common.schema.json#/$defs/Sha256Digest" },
+            "outputContentDigest": { "$ref": "common.schema.json#/$defs/Sha256Digest" }
+          }
+        },
+        "cancellation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["requestId", "canceledAt", "providerOutcomeUnknown"],
+          "properties": {
+            "requestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+            "canceledAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+            "providerOutcomeUnknown": { "type": "boolean" }
+          }
+        },
+        "createdAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+        "updatedAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+      }
+    },
+    "JobCreatedResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "requestId", "disposition", "job"],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.job-created.v1" },
+        "requestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "disposition": { "enum": ["created", "existing"] },
+        "job": { "$ref": "#/$defs/JobStatus" }
+      }
+    },
+    "RetryJobRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "requestId",
+        "processingJobId",
+        "expectedGeneration",
+        "acknowledgeOutcomeUnknown"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.retry-job.v1" },
+        "requestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "expectedGeneration": { "$ref": "common.schema.json#/$defs/U64" },
+        "acknowledgeOutcomeUnknown": { "type": "boolean" }
+      }
+    },
+    "RetryJobResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "requestId",
+        "processingJobId",
+        "disposition",
+        "acknowledgedOutcomeUnknown",
+        "generation",
+        "stateRevision",
+        "queuedAt"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.job-retried.v1" },
+        "requestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "disposition": { "const": "queued" },
+        "acknowledgedOutcomeUnknown": { "type": "boolean" },
+        "generation": { "$ref": "common.schema.json#/$defs/U64" },
+        "stateRevision": { "$ref": "common.schema.json#/$defs/PositiveU64" },
+        "queuedAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+      }
+    },
+    "CancelJobRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "requestId", "processingJobId", "expectedGeneration"],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.cancel-job.v1" },
+        "requestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "expectedGeneration": { "$ref": "common.schema.json#/$defs/U64" }
+      }
+    },
+    "CancelJobResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "requestId",
+        "processingJobId",
+        "disposition",
+        "generation",
+        "providerOutcomeUnknown",
+        "canceledAt"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "gumi.media-processing.job-canceled.v1" },
+        "requestId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "processingJobId": { "$ref": "common.schema.json#/$defs/UuidV7" },
+        "disposition": { "const": "canceled" },
+        "generation": { "$ref": "common.schema.json#/$defs/U64" },
+        "providerOutcomeUnknown": { "type": "boolean" },
+        "canceledAt": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+      }
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema": "gumi.omi-cv1.firmware-upstream-lock/v1",
+  "upstream": {
+    "repository": "https://github.com/BasedHardware/omi.git",
+    "tag": "Omi_CV1_v3.0.12",
+    "commit": "85159556eac753a088c5efd1b419a5a867508e27",
+    "path": "omi/firmware",
+    "license": "MIT"
+  },
+  "source_files": {
+    "omi/firmware/omi/omi.conf": "72838438b5999cd60c391f541f43cbc8d97ae1d403a913bba29b10c32ed04f65",
+    "omi/firmware/omi/src/main.c": "cb9108a9a7acc0141db8c11fda433bbef3727a008a60eaf475a6b3b5c27f0715",
+    "omi/firmware/bootloader/mcuboot/root-rsa-2048.pem": "1fc912d30251b821f251e127d4daf7ba9338dd5c04e5af100abfb5b7c7d4c022"
+  },
+  "ncs": {
+    "version": "v2.9.0",
+    "nrf_commit": "7787b264984022cda64d9629278942053e6462a5",
+    "zephyr_commit": "1f8f3dc291420c70cd39e77a5cdc954561d4a08f",
+    "mcuboot_commit": "12e5ee106034972b0f1074d6f2261b2b39d1501b",
+    "zephyr_sdk": "0.17.0"
+  },
+  "toolchain": {
+    "image": "ghcr.io/nrfconnect/sdk-nrf-toolchain:v2.9.0@sha256:7e9b61475ca05b8517079bedc8645479101fdaa17de2d0fa06a1633288112db2",
+    "platform": "linux/amd64",
+    "bundle": "/opt/ncs/toolchains/b77d8c1312"
+  },
+  "overlay": {
+    "patch": "patches/0001-canary-identity.patch",
+    "patch_sha256": "afbcb090bcb5f3b4d74b4a95acf9752253cdb6c31fa6407904e4b6c416248c43",
+    "intent": "application-image-0 identity-only canary",
+    "mcuboot_version": "0.0.0+0",
+    "materialized_source_files": {
+      "omi/firmware/omi/omi.conf": "68b75bb56d703bf31c1dd050a96c4b14c0b5e9afb189a9df0ecd6554f770b095",
+      "omi/firmware/omi/src/main.c": "90c6bf1250e41b165c0146d50f63ee0a5d4fb02287962f901c28df2729dc2732"
+    }
+  }
+}

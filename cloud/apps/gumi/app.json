@@ -1,0 +1,49 @@
+{
+  "$schema": "../../catalog/application-manifest.schema.json",
+  "schemaVersion": 1,
+  "appId": "gumi",
+  "kind": "astrale-domain",
+  "owner": "gumi-semantic-cloud",
+  "summary": "Owns authorized device, capture, recording, transcript, and conversation meaning inside one Astrale instance.",
+  "durableAuthority": [
+    "Semantic Device, CaptureSession, Recording, Transcript, and Conversation graph truth",
+    "Caller authorization and immutable cross-application projection acceptance"
+  ],
+  "dataClasses": ["semantic-metadata", "derived-content"],
+  "tenancy": {
+    "mode": "astrale-instance",
+    "sharedDeployment": false,
+    "scopeSource": "kernel-instance"
+  },
+  "contracts": [
+    {
+      "id": "gumi-domain-v0",
+      "protocol": "astrale-domain",
+      "version": "0.1.0",
+      "path": "schema/index.ts"
+    }
+  ],
+  "dependencies": [
+    {
+      "appId": "media-ingest",
+      "contractId": "media-ingest-v1",
+      "purpose": "Resolve caller-scoped immutable media manifest projections"
+    },
+    {
+      "appId": "media-processing",
+      "contractId": "media-processing-v1",
+      "purpose": "Resolve digest-bound derived artifacts and bounded transcript pages"
+    }
+  ],
+  "deployment": {
+    "status": "local-only",
+    "target": null,
+    "regions": []
+  },
+  "retention": {
+    "status": "unselected",
+    "class": "sensitive-user-content",
+    "policyId": null
+  },
+  "runbook": "README.md"
+}
