@@ -32,6 +32,17 @@ import dev.gumi.edge.sdk.ble.BleCentral
 import dev.gumi.edge.sdk.ble.BleConnectionOptions
 import dev.gumi.edge.sdk.ble.BleLinkSnapshot
 import dev.gumi.edge.sdk.ble.BleTransportSession
+import dev.gumi.edge.sdk.capability.capture.CaptureStateDescriptor
+import dev.gumi.edge.sdk.capability.capture.CaptureStateHandle
+import dev.gumi.edge.sdk.capability.capture.CaptureStateV1
+import dev.gumi.edge.sdk.capability.capture.DeviceCaptureAvailability
+import dev.gumi.edge.sdk.capability.capture.DeviceCaptureState
+import dev.gumi.edge.sdk.capability.capture.DeviceMaintenanceTruth
+import dev.gumi.edge.sdk.capability.capture.DeviceMicrophoneTruth
+import dev.gumi.edge.sdk.capability.capture.DevicePrivacyOutputTruth
+import dev.gumi.edge.sdk.capability.capture.DeviceRecordingTruth
+import dev.gumi.edge.sdk.capability.capture.DeviceSemanticSignalTruth
+import dev.gumi.edge.sdk.capability.capture.DeviceVoiceActionTruth
 import dev.gumi.edge.sdk.capability.power.PowerStatus
 import dev.gumi.edge.sdk.capability.power.PowerStatusDescriptor
 import dev.gumi.edge.sdk.capability.power.PowerStatusHandle
@@ -310,12 +321,18 @@ class OperationalDeviceRuntimeTest {
 
     @Test
     fun `session termination publishes operation-fenced disconnect truth`() = runTest {
-        val fixture = fixture()
+        val initialCapture = idleCapture(generation = 1uL)
+        val fixture = fixture(captureInitial = initialCapture)
         val owner = operation("disconnect-owner", 1uL)
         fixture.runtime.rehydrateAndReconcile(owner)
         val event = async { fixture.runtime.events.first() }
         runCurrent()
 
+        with(fixture.runtime.projection.value) {
+            assertEquals(OperationalCaptureTruth.DEVICE_REPORTED, capture)
+            assertEquals(initialCapture, captureState)
+            assertEquals(1uL, captureObservationRevision)
+        }
         fixture.session.eventSource.emit(DeviceSessionEvent.Closed)
         runCurrent()
 
@@ -326,8 +343,46 @@ class OperationalDeviceRuntimeTest {
             assertEquals(OperationalLinkState.DISCONNECTED, link)
             assertEquals("OPERATIONAL_DEVICE_DISCONNECTED", lastFailure?.code?.value)
             assertEquals(OperationalCaptureTruth.UNVERIFIED, capture)
+            assertEquals(initialCapture, captureState)
+            assertEquals(1uL, captureObservationRevision)
         }
         fixture.runtime.cleanup(cleanup("disconnect-stop", 2uL))
+        fixture.runtime.close()
+    }
+
+    @Test
+    fun `capture capability publishes versioned orthogonal device truth`() = runTest {
+        val updates = MutableSharedFlow<DeviceCaptureState>(extraBufferCapacity = 1)
+        val initial = idleCapture(generation = 11uL)
+        val active = activeCapture(generation = 12uL, recordingId = 44uL)
+        val fixture = fixture(
+            captureInitial = initial,
+            captureUpdates = updates,
+        )
+
+        fixture.runtime.rehydrateAndReconcile(operation("capture-owner", 1uL))
+
+        with(fixture.runtime.projection.value) {
+            assertEquals(OperationalRuntimeLifecycle.READY, lifecycle)
+            assertEquals(OperationalCaptureTruth.DEVICE_REPORTED, capture)
+            assertEquals(initial, captureState)
+            assertEquals(1uL, captureObservationRevision)
+        }
+        updates.emit(active)
+        runCurrent()
+        with(fixture.runtime.projection.value) {
+            assertEquals(OperationalCaptureTruth.DEVICE_REPORTED, capture)
+            assertEquals(active, captureState)
+            assertEquals(2uL, captureObservationRevision)
+        }
+
+        fixture.runtime.cleanup(cleanup("capture-stop", 2uL))
+        with(fixture.runtime.projection.value) {
+            assertEquals(OperationalCaptureTruth.UNVERIFIED, capture)
+            assertEquals(active, captureState)
+            assertEquals(2uL, captureObservationRevision)
+        }
+        assertBefore(fixture.order, "capture-collector-stop", "session-close")
         fixture.runtime.close()
     }
 
@@ -539,6 +594,7 @@ private data class OperationalFixture(
     val provider: FakeDriverProvider,
     val session: FakeNegotiatedSession,
     val power: FakePowerHandle,
+    val capture: FakeCaptureHandle?,
 )
 
 private fun TestScope.fixture(
@@ -555,6 +611,8 @@ private fun TestScope.fixture(
         OperationalEndpointResolutionResult.Resolved(operation, testEndpoint)
     },
     powerUpdates: Flow<PowerStatus>? = null,
+    captureInitial: DeviceCaptureState? = null,
+    captureUpdates: Flow<DeviceCaptureState>? = null,
 ): OperationalFixture {
     val storageLease = FakeStorageLease(order)
     val transport = FakeBleTransportSession(testEndpoint, order)
@@ -565,7 +623,14 @@ private fun TestScope.fixture(
         initial = PowerStatus(47u, null, null),
         updatesOverride = powerUpdates,
     )
-    val session = FakeNegotiatedSession(testEndpoint, order, transport, power)
+    val capture = captureInitial?.let {
+        FakeCaptureHandle(
+            order = order,
+            initial = it,
+            updatesOverride = captureUpdates,
+        )
+    }
+    val session = FakeNegotiatedSession(testEndpoint, order, transport, power, capture)
     val provider = FakeDriverProvider(order, session)
     val effectiveStorageHandler = if (
         storageHandler === DEFAULT_STORAGE_HANDLER
@@ -605,6 +670,7 @@ private fun TestScope.fixture(
         provider,
         session,
         power,
+        capture,
     )
 }
 
@@ -725,21 +791,30 @@ private class FakeNegotiatedSession(
     private val order: MutableList<String>,
     private val transport: TransportSession,
     power: PowerStatusHandle,
+    capture: CaptureStateHandle?,
 ) : NegotiatedDeviceSession {
     val eventSource = MutableSharedFlow<DeviceSessionEvent>(extraBufferCapacity = 8)
     private val powerDescriptor = power.descriptor
+    private val captureDescriptor = capture?.descriptor
+    private val descriptors = listOfNotNull(powerDescriptor, captureDescriptor)
+    private val bindings = buildList {
+        add(CapabilityBinding(PowerStatusV1, powerDescriptor, power))
+        if (capture != null && captureDescriptor != null) {
+            add(CapabilityBinding(CaptureStateV1, captureDescriptor, capture))
+        }
+    }
     override val deviceId: DeviceId? = null
     override val descriptor = DeviceDescriptor(
         driverId = DriverId("test.operational-driver"),
         manufacturer = "Gumi test",
         model = "portable",
         protocolVersion = "1",
-        capabilities = listOf(powerDescriptor),
+        capabilities = descriptors,
     )
     override val capabilities: CapabilitySet = assertIs<OperationResult.Success<CapabilitySet>>(
         CapabilitySet.negotiate(
-            advertised = listOf(powerDescriptor),
-            bindings = listOf(CapabilityBinding(PowerStatusV1, powerDescriptor, power)),
+            advertised = descriptors,
+            bindings = bindings,
         ),
     ).value
     override val events: Flow<DeviceSessionEvent> = eventSource
@@ -751,6 +826,30 @@ private class FakeNegotiatedSession(
         order += "session-close"
         closeCount += 1
         transport.close()
+    }
+}
+
+private class FakeCaptureHandle(
+    private val order: MutableList<String>,
+    initial: DeviceCaptureState,
+    updatesOverride: Flow<DeviceCaptureState>?,
+) : CaptureStateHandle {
+    override val descriptor = CaptureStateDescriptor(
+        localRecording = true,
+        readOnly = true,
+        liveMedia = false,
+        mediaExport = false,
+        semanticSignals = true,
+    )
+    private val updatesSource = updatesOverride ?: MutableSharedFlow(extraBufferCapacity = 8)
+    override val updates: Flow<DeviceCaptureState> = updatesSource
+        .onStart { order += "capture-collector-start" }
+        .onCompletion { order += "capture-collector-stop" }
+    var nextRead: DeviceCaptureState = initial
+
+    override suspend fun read(): DeviceCaptureState {
+        order += "capture-read"
+        return nextRead
     }
 }
 
@@ -838,4 +937,37 @@ private val testEndpoint = EndpointCandidate(
     transport = TransportKind.BLE,
     ephemeralId = "ble:test-operational-endpoint",
     advertisedName = "test",
+)
+
+private fun idleCapture(generation: ULong) = DeviceCaptureState(
+    generation = generation,
+    microphone = DeviceMicrophoneTruth.VERIFIED_OFF,
+    recording = DeviceRecordingTruth.INACTIVE,
+    voiceAction = DeviceVoiceActionTruth.INACTIVE,
+    semanticSignal = DeviceSemanticSignalTruth.INACTIVE,
+    privacyOutput = DevicePrivacyOutputTruth.INACTIVE,
+    maintenance = DeviceMaintenanceTruth.NORMAL,
+    availability = DeviceCaptureAvailability.READY,
+    activeRecordingId = null,
+    freeBytes = 8uL * 1024uL * 1024uL,
+    faultCode = null,
+    observedAtMonotonicMillis = null,
+)
+
+private fun activeCapture(
+    generation: ULong,
+    recordingId: ULong,
+) = DeviceCaptureState(
+    generation = generation,
+    microphone = DeviceMicrophoneTruth.ACQUIRED,
+    recording = DeviceRecordingTruth.ACTIVE,
+    voiceAction = DeviceVoiceActionTruth.INACTIVE,
+    semanticSignal = DeviceSemanticSignalTruth.INACTIVE,
+    privacyOutput = DevicePrivacyOutputTruth.ACTIVE,
+    maintenance = DeviceMaintenanceTruth.NORMAL,
+    availability = DeviceCaptureAvailability.BUSY,
+    activeRecordingId = recordingId,
+    freeBytes = 7uL * 1024uL * 1024uL,
+    faultCode = null,
+    observedAtMonotonicMillis = null,
 )

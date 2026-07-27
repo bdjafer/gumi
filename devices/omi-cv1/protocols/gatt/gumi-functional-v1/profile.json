@@ -1,0 +1,98 @@
+{
+  "owner": "devices/omi-cv1",
+  "profile_schema": "gumi.functional-gatt/v1",
+  "evidence_kind": "firmware_declared_exact_board_link_qualified",
+  "physical_observation": false,
+  "firmware": {
+    "profile": "functional-recording-0005",
+    "wire_compatible_profiles": [
+      "functional-recording-0001",
+      "functional-recording-0002",
+      "functional-recording-0003",
+      "functional-recording-0004",
+      "functional-recording-0005"
+    ],
+    "upstream_base_commit": "85159556eac753a088c5efd1b419a5a867508e27",
+    "advertised_name": "Gumi",
+    "manufacturer": "Gumi",
+    "model": "Omi CV 1",
+    "firmware_revision": "3.0.12",
+    "software_revision": "gumi-functional-recording-0005",
+    "hardware_revision": "5.0"
+  },
+  "services": {
+    "family_discriminator": "19b10000-e8f2-537e-4f6c-d104768a1214",
+    "functional": {
+      "uuid": "47554d49-0001-4f4d-492d-435631000001",
+      "characteristics": [
+        {
+          "name": "status",
+          "uuid": "47554d49-0002-4f4d-492d-435631000001",
+          "properties": ["read", "notify"],
+          "size_bytes": 40
+        },
+        {
+          "name": "capabilities",
+          "uuid": "47554d49-0003-4f4d-492d-435631000001",
+          "properties": ["read"],
+          "size_bytes": 16
+        }
+      ]
+    }
+  },
+  "status": {
+    "version": 1,
+    "byte_order": "little_endian",
+    "size_bytes": 40,
+    "fields": [
+      {"name": "version", "offset": 0, "size": 1, "type": "u8"},
+      {"name": "capture_phase", "offset": 1, "size": 1, "type": "u8"},
+      {"name": "microphone_truth", "offset": 2, "size": 1, "type": "u8"},
+      {"name": "supervisor_storage_state", "offset": 3, "size": 1, "type": "u8"},
+      {"name": "recording_key_truth", "offset": 4, "size": 1, "type": "u8"},
+      {"name": "recording_storage_truth", "offset": 5, "size": 1, "type": "u8"},
+      {"name": "codec_truth", "offset": 6, "size": 1, "type": "u8"},
+      {"name": "flags", "offset": 7, "size": 1, "type": "u8"},
+      {"name": "active_recording_id", "offset": 8, "size": 8, "type": "u64"},
+      {"name": "free_bytes", "offset": 16, "size": 8, "type": "u64"},
+      {"name": "last_error", "offset": 24, "size": 4, "type": "i32"},
+      {"name": "generation", "offset": 28, "size": 4, "type": "u32"},
+      {"name": "reserved_zero", "offset": 32, "size": 8, "type": "bytes"}
+    ],
+    "flags": {
+      "operational": 1,
+      "base_audio_permitted": 2,
+      "voice_audio_permitted": 4,
+      "privacy_asserted": 8,
+      "update_admitted": 16,
+      "key_ready": 32,
+      "storage_ready": 64,
+      "faulted": 128
+    }
+  },
+  "capabilities": {
+    "bytes_hex": "01010101010101010300000000000000",
+    "features": ["local_recording", "read_only_state"],
+    "absent": [
+      "remote_capture_command",
+      "live_media",
+      "media_export",
+      "media_delete",
+      "realtime_voice_turn"
+    ]
+  },
+  "ota": {
+    "transport": "mcumgr_ble",
+    "application_image": 0,
+    "network_image_admitted": false,
+    "physical_boot_hold_ms": 2000,
+    "physical_runtime_hold_ms": 5000,
+    "runtime_cold_reset_hold_ms": 12000,
+    "task_watchdog_timeout_ms": 15000,
+    "hardware_watchdog_fallback": true,
+    "runtime_confirmation_lifetime": "until_reboot",
+    "runtime_confirmation_makes_maintenance_exclusive": true,
+    "requires_capture_idle": true,
+    "requires_microphone_verified_off": true
+  }
+}

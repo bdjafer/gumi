@@ -1,0 +1,136 @@
+{
+  "owner": "devices/omi-cv1",
+  "release_schema": "gumi.omi-cv1.application-release/v1",
+  "release_id": "omi-cv1-v3012-functional-recording-0006-to-legacy-storage-reclaimer-0001",
+  "intent": "application-image-0 bounded one-shot deletion of the exact verified legacy stock recording",
+  "source": {
+    "upstream_tag": "Omi_CV1_v3.0.12",
+    "upstream_commit": "85159556eac753a088c5efd1b419a5a867508e27",
+    "application_image_index": 0,
+    "application_mcuboot_image_hash": "3a35a3324393e563e36b2748f0b1f842ce5db52834cd0023334d9c9ac3071aa1",
+    "network_image_index": 1,
+    "network_mcuboot_image_hash": "267b11e2d413acebb874c76204be9f5f3872b9d033bd228ba5bcd46a27903089",
+    "mcuboot_version": "0.0.0+0"
+  },
+  "application_artifact": {
+    "identity": "gumi/Omi_CV1_v3.0.12/legacy-storage-reclaimer-0001/omi.signed.bin",
+    "size_bytes": 114448,
+    "file_sha256": "a5c7ed5f396312bed89eafb015bdea27c503e45e918e2e0706cb08ef41e6e242",
+    "image_index": 0,
+    "header_size_bytes": 512,
+    "payload_size_bytes": 113600,
+    "protected_tlv_size_bytes": 0,
+    "mcuboot_image_hash": "701149e72c5da262ac57d869cb70e62368eb7e9f53666bdd5f242fb0cc31c655",
+    "mcuboot_version": "0.0.0+0",
+    "compatibility_key_hash": "fc5701dc6135e1323847bdc40f04d2e5bee5833b23c29f93593d00018cfa9994",
+    "signature": "RSA-2048-PSS",
+    "security_counter": null,
+    "deterministic_prefix_bytes": 114192,
+    "signature_verified": true
+  },
+  "observable_identity": {
+    "device_information_firmware_revision": "3.0.12",
+    "device_information_software_revision": "gumi-legacy-storage-reclaimer-0001",
+    "reclaimer_service_uuid": "47554d49-0011-4f4d-492d-435631000001",
+    "status_characteristic_uuid": "47554d49-0011-4f4d-492d-435631000002",
+    "status_wire_size_bytes": 40,
+    "protocol_contract": "devices/omi-cv1/protocols/gatt/gumi-legacy-storage-reclaimer-v1/profile.json",
+    "accepted_terminal_phases": [
+      "RECLAIMED",
+      "ALREADY_ABSENT"
+    ]
+  },
+  "behavior": {
+    "only_delete_target": "/SD:/audio/a01.txt",
+    "required_target_type": "regular file",
+    "required_target_size_bytes": 505118720,
+    "minimum_free_bytes_after": 4194304,
+    "wrong_type_or_size": "refuse without deletion",
+    "missing_target_with_insufficient_free_space": "refuse without deletion",
+    "filesystem_format": false,
+    "recursive_delete": false,
+    "capture_permitted": false,
+    "audio_content_read_or_exported": false
+  },
+  "safety_boundary": {
+    "caller_controlled_filesystem_path": false,
+    "functional_capture_services_linked": false,
+    "stock_capture_or_storage_services_linked": false,
+    "microphone_verified_off_before_storage_inspection": true,
+    "filesystem_format_path_linked": false,
+    "only_exact_target_unlink_linked": true,
+    "post_delete_absence_verified": true,
+    "post_delete_minimum_free_space_verified": true,
+    "storage_unmounted_and_suspended_before_followup_mutation": true,
+    "application_image_0_upload_only": true,
+    "network_image_upload_rejected_by_application": true,
+    "image_upload_and_remote_reset_denied_until_terminal_state": true,
+    "task_watchdog_timeout_ms": 15000,
+    "hardware_watchdog_fallback": true,
+    "destructive_settings_storage_erase_handler_linked": false,
+    "ble_management_authenticated": false,
+    "boot_policy": "overwrite-only",
+    "cryptographically_immutable_recovery": false
+  },
+  "build": {
+    "overlay_patch_sha256": "06faad731c0a87202c8184de72c6f9fae2476c45b50b38644ac32b105ab90573",
+    "reclaimer_config_sha256": "899ccbf78a28c700536f4170e7033aaa53a458e6aecb1d4b7cb7132af6f491ad",
+    "reclaimer_source_manifest_sha256": "3c36f64402f4cd0cb6e8b4175609e408f0c2ca94e74bf55c5929b0891540751e",
+    "materialized_cmake_sha256": "33e4905f37bdb76ac977826cc42f8fab5f12445c4da700766326cf9fc5fe7a5c",
+    "ncs_version": "v2.9.0",
+    "nrf_commit": "7787b264984022cda64d9629278942053e6462a5",
+    "zephyr_commit": "1f8f3dc291420c70cd39e77a5cdc954561d4a08f",
+    "mcuboot_commit": "12e5ee106034972b0f1074d6f2261b2b39d1501b",
+    "zephyr_sdk": "0.17.0",
+    "toolchain_image": "ghcr.io/nrfconnect/sdk-nrf-toolchain:v2.9.0@sha256:7e9b61475ca05b8517079bedc8645479101fdaa17de2d0fa06a1633288112db2",
+    "partition_map_sha256": "b455f45133912e7d5e2d27a0cb40c018620bd101d164b14d8e805e0c1a0f30f9",
+    "partition_map_matches_canonical_stock_build": true
+  },
+  "qualification": {
+    "portable_policy_tests": 4,
+    "exact_board_full_composition_link": "pass",
+    "exact_target_and_size_gate": "pass",
+    "no_format_symbol_and_configuration_gate": "pass",
+    "preterminal_mcumgr_mutation_gate": "pass",
+    "microphone_off_gate": "pass",
+    "storage_shutdown_before_mutation_gate": "pass",
+    "watchdog_symbol_and_configuration_gate": "pass",
+    "imgtool_version": "2.1.0",
+    "signature_result": "Image was correctly validated",
+    "performed_utc_date": "2026-07-25",
+    "device_was_contacted": true,
+    "behavioral_candidate": "superseded after physical OTA handoff failure"
+  },
+  "physical_incident": {
+    "observed_date": "2026-07-25",
+    "observed_result": "the exact-file reclaim completed, but every subsequent image-0 upload failed at byte zero with MCU Manager FLASH_WRITE_FAILED",
+    "root_cause": "the reclaimer powers down the SD peer on shared SPI3 before follow-up external-flash mutation",
+    "active_image_remained_confirmed": true,
+    "inactive_slot_remained_absent": true,
+    "ota_successor_permitted": false,
+    "automatic_rollback_available": false,
+    "recovery_requirement": "SWD",
+    "superseded_by": "legacy-storage-reclaimer-0002"
+  },
+  "quarantined_build_outputs": [
+    {
+      "file": "zephyr.bin",
+      "reason": "unsigned application",
+      "size_bytes": 113600,
+      "sha256": "7e91e5606da92fead31d4ab50cbb2eb7da3237539fd812cf88112123bdb4e79d"
+    },
+    {
+      "file": "ipc_radio.bin",
+      "reason": "locally generated network image contains a non-published NSIB key",
+      "size_bytes": 174068,
+      "sha256": "f09e4b27f9cbf7edf350196f9c60e9cda786ace34e5b173bc2576dbed8479c7a"
+    },
+    {
+      "file": "dfu_application.zip",
+      "reason": "multi-image package includes the quarantined network image",
+      "size_bytes": 290770,
+      "sha256": "4ffe50c7d00cc55f715af989d6272c01c8ee7ba4b515315d2e9c6beaf8ff0a54"
+    }
+  ],
+  "artifact_conveys_physical_authorization": false
+}

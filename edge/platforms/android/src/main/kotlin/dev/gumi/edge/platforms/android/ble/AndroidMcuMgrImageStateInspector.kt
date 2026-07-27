@@ -65,9 +65,11 @@ class AndroidMcuMgrImageStateInspector(
 
         val transport = McuMgrBleTransport(applicationContext, device).apply {
             setLoggingEnabled(false)
-            // Preserve the already observed baseline MTU. The library still emits an ATT MTU
-            // request, but requests the default value rather than silently negotiating 498.
-            setInitialMtu(BASELINE_ATT_MTU)
+            // The image-state CBOR response does not fit Nordic Device Manager's ATT-MTU-23
+            // transport envelope. Both the recovered stock link and Gumi recovery firmware have
+            // already qualified the target's 498-byte ceiling. MTU negotiation is transient link
+            // setup and does not persistently mutate the pendant.
+            setInitialMtu(IMAGE_STATE_ATT_MTU)
         }
         val releaseTransport = RunOnce(transport::release)
         return try {
@@ -95,11 +97,11 @@ class AndroidMcuMgrImageStateInspector(
     }
 
     companion object {
-        const val BASELINE_ATT_MTU = 23
+        const val IMAGE_STATE_ATT_MTU = 498
 
         val READ_DISCLOSURE = FirmwareImageStateReadDisclosure(
             protocol = "mcumgr-smp",
-            requestedAttMtu = BASELINE_ATT_MTU,
+            requestedAttMtu = IMAGE_STATE_ATT_MTU,
             writesRequestCharacteristic = true,
             writesNotificationDescriptor = true,
             protocolReads = listOf(

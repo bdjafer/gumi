@@ -1,0 +1,121 @@
+{
+  "owner": "devices/omi-cv1",
+  "release_schema": "gumi.omi-cv1.application-release/v1",
+  "release_id": "omi-cv1-v3012-gumi-recovery-only-0001-to-capture-port-selftest-0001",
+  "intent": "application-image-0 media-free capture-port hardware qualification",
+  "source": {
+    "upstream_tag": "Omi_CV1_v3.0.12",
+    "upstream_commit": "85159556eac753a088c5efd1b419a5a867508e27",
+    "application_image_index": 0,
+    "application_mcuboot_image_hash": "065be47c212f3c233bd683c780a5b1dfb583f7dbac932029d15d1fd1cf692d57",
+    "network_image_index": 1,
+    "network_mcuboot_image_hash": "267b11e2d413acebb874c76204be9f5f3872b9d033bd228ba5bcd46a27903089",
+    "mcuboot_version": "0.0.0+0"
+  },
+  "application_artifact": {
+    "identity": "gumi/Omi_CV1_v3.0.12/capture-port-selftest-0001/omi.signed.bin",
+    "size_bytes": 178100,
+    "file_sha256": "8f0d0fc35c4d3c56e8f94d528a0b56c0d4af7b44b7bdad2b2fa4f2963e2e3d0e",
+    "image_index": 0,
+    "header_size_bytes": 512,
+    "payload_size_bytes": 177252,
+    "protected_tlv_size_bytes": 0,
+    "mcuboot_image_hash": "e97fd653a66dce18a7dbd071bc9b21c4fdae4e229de5d245e76ed213c2ca4862",
+    "mcuboot_version": "0.0.0+0",
+    "compatibility_key_hash": "fc5701dc6135e1323847bdc40f04d2e5bee5833b23c29f93593d00018cfa9994",
+    "signature": "RSA-2048-PSS",
+    "security_counter": null,
+    "deterministic_prefix_bytes": 177844,
+    "signature_verified": true
+  },
+  "observable_identity": {
+    "device_information_firmware_revision": "3.0.12",
+    "device_information_software_revision": "gumi-capture-port-selftest-0001",
+    "capture_selftest_service_uuid": "f80a6e60-3b3f-4e8a-93e4-5f5e2c527001",
+    "capture_selftest_status_characteristic_uuid": "f80a6e61-3b3f-4e8a-93e4-5f5e2c527001",
+    "capture_selftest_arm_characteristic_uuid": "f80a6e62-3b3f-4e8a-93e4-5f5e2c527001",
+    "status_wire_size_bytes": 32,
+    "status_schema": "[version, phase, failure, flags, attempt, pcm_blocks, pcm_samples, opus_packets, discarded_samples, terminal_error, lease_remaining_ms] little-endian counters",
+    "arm_schema": "acknowledged write of exactly one byte 0x01 creates one 15000 ms lease"
+  },
+  "safety_boundary": {
+    "functional_capture_services_linked": false,
+    "audio_or_storage_transport_linked": false,
+    "audio_bytes_transmitted_or_persisted": false,
+    "microphone_start_requires_firmware_arm_and_physical_hold": true,
+    "physical_confirmation_hold_ms": 2000,
+    "capture_exercise_ms": 3000,
+    "red_privacy_output_precedes_microphone_acquisition": true,
+    "failed_microphone_release_holds_red_and_locks_rearm": true,
+    "application_image_0_upload_only": true,
+    "network_image_upload_rejected_by_application": true,
+    "destructive_settings_storage_erase_handler_linked": false,
+    "ble_management_authenticated": false,
+    "boot_policy": "overwrite-only",
+    "cryptographically_immutable_recovery": false,
+    "development_warning": "The stock compatibility signing private key is public upstream; this is a bounded development qualification image, not an immutable recovery root."
+  },
+  "build": {
+    "overlay_patch_sha256": "d2728f3bec5d63f4ef0b9ecc379cb79e1e2b24516ac928061c952a88f875d1ce",
+    "capture_selftest_config_sha256": "8cc9df7470b0785c13f50f0ec16010bb339146b1d8b5baadf5c01bdfad5026fe",
+    "materialized_source_sha256": {
+      "CMakeLists.txt": "927978102f59dc3e973e6c49ce9d4698ec18f29c8a3c4dfccb667b1450bf8072",
+      "button.h": "3d687a7aa02b652d4ea21d4269f36504df017fb6e4d9670a84039502b041c633",
+      "button.c": "61c389380dc16056a1bad9cb341bc488fd3ffebbfd675faba916014a4e939262",
+      "capture_selftest.h": "a763b5aa3dad3e3dd455938f5ebb62b249965877d77b69587c2a27161059b7b9",
+      "capture_selftest.c": "aa0836c0652bd0d2ab58197ba8b8fe726cdefda7ec0a863229635e9e508bf57f",
+      "omi_v3012_mic.h": "922b054be612aae87539c273da97eb3d4e2c00d616598cdb398176d03fd7a09b",
+      "omi_v3012_codec.h": "364880210dcf280c1717bc179300f752b937f39516743ffeefad9e2d73c46aee",
+      "omi_v3012_capture_selftest.h": "ccc5695a4a3664eb703bf467071da844fcb46f9f44fc8a2a101567685e4ce0cd",
+      "mic_port.c": "0a1eb9f8e9748724f6b13071e19645803ef02730f3f93faa1fa21461fb70eafc",
+      "codec_port.c": "e9df0036d3efd9ed771311b24da30c9647b06e1011b70c7cb75af67e43d8fa20",
+      "capture_selftest_io.c": "782155908ff5ad38eb87f4b23e94f4edc891dd7f5df360cfc061fd2e1d52c69e",
+      "capture_selftest_transport.c": "b9e72ccf921b3940e3d8f608fec81ca0fb61ac008f98f27f647d341e7d0e4196",
+      "capture_selftest_main.c": "851e65e475a5030087173be1de1f8fa3ad9ceee2cf30c3b91f027bb7394f7435"
+    },
+    "ncs_version": "v2.9.0",
+    "nrf_commit": "7787b264984022cda64d9629278942053e6462a5",
+    "zephyr_commit": "1f8f3dc291420c70cd39e77a5cdc954561d4a08f",
+    "mcuboot_commit": "12e5ee106034972b0f1074d6f2261b2b39d1501b",
+    "zephyr_sdk": "0.17.0",
+    "toolchain_image": "ghcr.io/nrfconnect/sdk-nrf-toolchain:v2.9.0@sha256:7e9b61475ca05b8517079bedc8645479101fdaa17de2d0fa06a1633288112db2",
+    "partition_map_sha256": "b455f45133912e7d5e2d27a0cb40c018620bd101d164b14d8e805e0c1a0f30f9",
+    "partition_map_matches_canonical_stock_build": true
+  },
+  "qualification": {
+    "imgtool_version": "2.1.0",
+    "signature_result": "Image was correctly validated",
+    "performed_utc_date": "2026-07-22",
+    "device_was_contacted": false,
+    "behavioral_candidate": "offline-qualified; physical qualification pending"
+  },
+  "recovery_return": {
+    "release_id": "omi-cv1-v3012-capture-port-selftest-0001-to-gumi-recovery-only-0001",
+    "required_source_application_mcuboot_image_hash": "e97fd653a66dce18a7dbd071bc9b21c4fdae4e229de5d245e76ed213c2ca4862",
+    "required_source_network_mcuboot_image_hash": "267b11e2d413acebb874c76204be9f5f3872b9d033bd228ba5bcd46a27903089",
+    "recovery_application_size_bytes": 106936,
+    "recovery_application_file_sha256": "d29a5292eeeff01bc0c2984ef0a852706392f2eb1d888ea3c8daa221881e75cc",
+    "recovery_application_mcuboot_image_hash": "065be47c212f3c233bd683c780a5b1dfb583f7dbac932029d15d1fd1cf692d57"
+  },
+  "quarantined_build_outputs": [
+    {
+      "file": "zephyr.bin",
+      "reason": "unsigned application",
+      "size_bytes": 177252,
+      "sha256": "7c602e75a4d8bfea551f731b432a668c2aa44381d89e3723cfecdced388e5442"
+    },
+    {
+      "file": "ipc_radio.bin",
+      "reason": "locally generated network image contains a non-published NSIB key",
+      "size_bytes": 174068,
+      "sha256": "f09e4b27f9cbf7edf350196f9c60e9cda786ace34e5b173bc2576dbed8479c7a"
+    },
+    {
+      "file": "dfu_application.zip",
+      "reason": "multi-image package includes the quarantined network image",
+      "size_bytes": 354422,
+      "sha256": "00fb64991c10ce361bccc05c7139fa670de88282ca424ec6f99667e36e90cb16"
+    }
+  ],
+  "artifact_conveys_physical_authorization": false
+}

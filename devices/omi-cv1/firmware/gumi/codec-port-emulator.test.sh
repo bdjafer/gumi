@@ -12,7 +12,6 @@ ncs_workspace=$(CDPATH='' cd -- "$2" && pwd)
 build_name=${3:-build-gumi-codec-port-emulator-0001}
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 firmware_dir=$(CDPATH='' cd -- "$script_dir/.." && pwd)
-test_app="$script_dir/zephyr/omi-v3012/tests/codec-port-emulator"
 port_dir="$script_dir/zephyr/omi-v3012"
 expected_commit='85159556eac753a088c5efd1b419a5a867508e27'
 expected_opus_tree='7d93cb197c90baa60870baed2484580222fbbe6c'
@@ -64,11 +63,25 @@ docker run --rm --pull never --network none --platform linux/amd64 \
     "set -eu
 git config --global --add safe.directory '*'
 west zephyr-export
-west build -b mps2/an521/cpu0 /gumi-firmware/gumi/zephyr/omi-v3012/tests/codec-port-emulator \\
-  -d '$build_name' --pristine always -- \\
+west build -b mps3/an547 /gumi-firmware/gumi/zephyr/omi-v3012/tests/codec-port-emulator \\
+  -d '$build_name' --pristine always --no-sysbuild -- \\
   -DGUMI_CODEC_PORT_DIR=/gumi-firmware/gumi/zephyr/omi-v3012 \\
   -DOMI_OPUS_DIR=/omi/source/omi/firmware/omi/src/lib/core/lib/opus-1.2.1
-west build -d '$build_name' -t run"
+run_log='$build_name/qemu-run.log'
+set +e
+timeout 10s west build -d '$build_name' -t run 2>&1 | tee \"\$run_log\"
+run_status=\${PIPESTATUS[0]}
+set -e
+case \"\$run_status\" in
+  0 | 124 | 143) ;;
+  *) echo \"QEMU runner failed with status \$run_status\" >&2; exit 1 ;;
+esac
+grep -F 'PROJECT EXECUTION SUCCESSFUL' \"\$run_log\" >/dev/null
+grep -F 'SUITE PASS - 100.00% [codec_port_lifecycle]' \"\$run_log\" >/dev/null
+if grep -Eq 'SUITE FAIL|PROJECT EXECUTION FAILED|ZEPHYR FATAL ERROR' \"\$run_log\"; then
+  echo 'codec lifecycle emulator reported a failure' >&2
+  exit 1
+fi"
 
 echo "codec_port_emulator_result=pass"
 echo "physical_device_contacted=false"

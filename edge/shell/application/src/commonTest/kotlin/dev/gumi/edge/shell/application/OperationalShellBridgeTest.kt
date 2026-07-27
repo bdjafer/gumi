@@ -1,6 +1,8 @@
 package dev.gumi.edge.shell.application
 
 import dev.gumi.edge.runtime.capture.CaptureTruth
+import dev.gumi.edge.runtime.capture.CaptureMode
+import dev.gumi.edge.runtime.operational.OperationalCaptureTruth
 import dev.gumi.edge.runtime.host.RuntimeHostOperation
 import dev.gumi.edge.runtime.operational.OperationalBacklog
 import dev.gumi.edge.runtime.operational.OperationalBacklogScope
@@ -17,6 +19,14 @@ import dev.gumi.edge.sdk.DeviceId
 import dev.gumi.edge.sdk.ExpectedFailure
 import dev.gumi.edge.sdk.FailureCategory
 import dev.gumi.edge.sdk.FailureCode
+import dev.gumi.edge.sdk.capability.capture.DeviceCaptureAvailability
+import dev.gumi.edge.sdk.capability.capture.DeviceCaptureState
+import dev.gumi.edge.sdk.capability.capture.DeviceMaintenanceTruth
+import dev.gumi.edge.sdk.capability.capture.DeviceMicrophoneTruth
+import dev.gumi.edge.sdk.capability.capture.DevicePrivacyOutputTruth
+import dev.gumi.edge.sdk.capability.capture.DeviceRecordingTruth
+import dev.gumi.edge.sdk.capability.capture.DeviceSemanticSignalTruth
+import dev.gumi.edge.sdk.capability.capture.DeviceVoiceActionTruth
 import dev.gumi.edge.sdk.capability.power.PowerStatus as DevicePowerStatus
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -95,6 +105,63 @@ class OperationalShellBridgeTest {
         assertEquals(CapturePresentationKind.UNKNOWN, projected.capture.value.kind)
         assertEquals(CaptureAssurance.MAY_BE_ACTIVE, projected.capture.value.assurance)
     }
+
+    @Test
+    fun `device capture capability becomes fresh physical truth and disconnect preserves uncertainty`() =
+        runTest {
+            val projectionPort = RecordingProjectionPort()
+            val clock = MutableClock(1_000)
+            val bridge = bridge(projectionPort = projectionPort, clock = clock)
+            val idle = readyProjection(sequence = 1L).copy(
+                capture = OperationalCaptureTruth.DEVICE_REPORTED,
+                captureState = deviceCapture(recording = false, generation = 4UL),
+                captureObservationRevision = 1UL,
+            )
+
+            bridge.publish(idle)
+            val idleCapture = projectionPort.updates.last().snapshot.capture
+            assertEquals(ProjectionAuthority.DEVICE_REPORTED, idleCapture.authority)
+            assertEquals(ObservationFreshness.FRESH, idleCapture.freshness)
+            assertEquals(
+                CaptureMode.IDLE,
+                assertIs<CaptureTruth.Acquired>(idleCapture.value.truth).mode,
+            )
+            assertEquals(SESSION, idleCapture.connectionSessionGeneration)
+
+            clock.now = 2_000
+            val recording = idle.copy(
+                sequence = 2L,
+                captureState = deviceCapture(recording = true, generation = 5UL),
+                captureObservationRevision = 2UL,
+            )
+            bridge.publish(recording)
+            val activeCapture = projectionPort.updates.last().snapshot.capture
+            assertEquals(
+                CaptureMode.RECORDING,
+                assertIs<CaptureTruth.Acquired>(activeCapture.value.truth).mode,
+            )
+            assertEquals(2_000L, activeCapture.observedAtEpochMillis)
+
+            clock.now = 3_000
+            bridge.publish(
+                recording.copy(
+                    lifecycle = OperationalRuntimeLifecycle.DEGRADED,
+                    link = OperationalLinkState.DISCONNECTED,
+                    capture = OperationalCaptureTruth.UNVERIFIED,
+                    sequence = 3L,
+                ),
+            )
+            val disconnected = projectionPort.updates.last().snapshot.capture
+            val uncertain = assertIs<CaptureTruth.Unverified>(disconnected.value.truth)
+            assertEquals(CaptureMode.RECORDING, uncertain.lastReportedMode)
+            assertEquals(ObservationFreshness.STALE, disconnected.freshness)
+            assertNull(disconnected.connectionSessionGeneration)
+            assertEquals(
+                CapturePresentationKind.MAY_BE_RECORDING,
+                ShellProjector.project(projectionPort.updates.last().snapshot, 3_000)
+                    .capture.value.kind,
+            )
+        }
 
     @Test
     fun `edge host backlog is never presented as per device sync truth`() = runTest {
@@ -454,6 +521,40 @@ class OperationalShellBridgeTest {
             intent = intent,
         ),
         expectedOwnerGeneration = owner,
+    )
+
+    private fun deviceCapture(
+        recording: Boolean,
+        generation: ULong,
+    ) = DeviceCaptureState(
+        generation = generation,
+        microphone = if (recording) {
+            DeviceMicrophoneTruth.ACQUIRED
+        } else {
+            DeviceMicrophoneTruth.VERIFIED_OFF
+        },
+        recording = if (recording) {
+            DeviceRecordingTruth.ACTIVE
+        } else {
+            DeviceRecordingTruth.INACTIVE
+        },
+        voiceAction = DeviceVoiceActionTruth.INACTIVE,
+        semanticSignal = DeviceSemanticSignalTruth.INACTIVE,
+        privacyOutput = if (recording) {
+            DevicePrivacyOutputTruth.ACTIVE
+        } else {
+            DevicePrivacyOutputTruth.INACTIVE
+        },
+        maintenance = DeviceMaintenanceTruth.NORMAL,
+        availability = if (recording) {
+            DeviceCaptureAvailability.BUSY
+        } else {
+            DeviceCaptureAvailability.READY
+        },
+        activeRecordingId = if (recording) 9UL else null,
+        freeBytes = 8UL * 1024UL * 1024UL,
+        faultCode = null,
+        observedAtMonotonicMillis = null,
     )
 
     private fun assertRejected(

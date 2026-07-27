@@ -1,0 +1,52 @@
+{
+  "schema": "gumi.omi-cv1-interaction-policy-profiles/v1",
+  "status": "proposed_unqualified",
+  "input": "semantic_button_events",
+  "authority": "device_local_capture_coordinator",
+  "profiles": {
+    "manual-recording-push-to-talk-v1": {
+      "single_tap": "show_status",
+      "double_tap_when_recording_inactive": "start_base_recording",
+      "double_tap_when_recording_active": "stop_base_recording",
+      "hold_committed": "begin_voice_action",
+      "hold_released": "end_voice_action",
+      "artifact_status": {
+        "functional-recording-0003": "behavior_equivalent_mapping_embedded_in_frozen_target_source",
+        "functional-recording-0004": "behavior_equivalent_mapping_inherited_unchanged_from_v0003",
+        "functional-recording-0005": "behavior_equivalent_mapping_inherited_unchanged_from_v0003",
+        "portable_policy_module": "implemented_for_vnext_not_linked_into_frozen_artifact"
+      }
+    },
+    "continuous-recording-marker-v1": {
+      "single_tap": "show_status",
+      "double_tap": "show_status",
+      "hold_committed_while_recording": "begin_interpretation_marker",
+      "hold_released": "end_interpretation_marker",
+      "artifact_status": {
+        "functional-recording-0003": "not_present",
+        "functional-recording-0004": "not_present",
+        "functional-recording-0005": "not_present",
+        "portable_policy_module": "implemented_unshipped"
+      }
+    }
+  },
+  "semantic_signal": {
+    "interpretation_marker": {
+      "requires_active_recording": true,
+      "correlated_fields": [
+        "signal_id",
+        "recording_id",
+        "started_at_ms",
+        "ended_at_ms"
+      ],
+      "recording_close_interrupts_open_marker": true
+    }
+  },
+  "invariants": [
+    "gesture_recognizer_never_owns_capture_policy",
+    "policy_consumes_live_coordinator_facts_without_shadow_capture_state",
+    "maintenance_and_fatal_privacy_exclude_capture_intents",
+    "profile_change_requires_reviewed_firmware_build_and_fresh_physical_qualification",
+    "semantic_marker_is_data_and_never_changes_microphone_or_recording_truth"
+  ]
+}

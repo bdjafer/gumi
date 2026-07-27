@@ -3,6 +3,7 @@ package dev.gumi.edge.platforms.android.ble
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import dev.gumi.edge.sdk.EndpointCandidate
+import dev.gumi.edge.sdk.TransportKind
 import java.util.UUID
 
 /** Equality-only result for two observations made through one directory instance. */
@@ -25,8 +26,14 @@ class AndroidBleEndpointDirectory {
     private val entriesByAddress = mutableMapOf<String, Entry>()
     private val devicesByEndpoint = mutableMapOf<String, BluetoothDevice>()
 
+    /**
+     * Registers a platform observation without exposing the stable Android BLE address.
+     *
+     * This is public so device-specific Android adapters can share one process-local directory
+     * with the generic scanner, GATT inspector, and transport implementations.
+     */
     @SuppressLint("MissingPermission")
-    internal fun observe(device: BluetoothDevice): String = synchronized(this) {
+    fun observe(device: BluetoothDevice): String = synchronized(this) {
         entriesByAddress.getOrPut(device.address) {
             val endpointId = "ble:${UUID.randomUUID()}"
             devicesByEndpoint[endpointId] = device
@@ -36,6 +43,17 @@ class AndroidBleEndpointDirectory {
 
     internal fun resolve(ephemeralId: String): BluetoothDevice? = synchronized(this) {
         devicesByEndpoint[ephemeralId]
+    }
+
+    /**
+     * Resolves only a live endpoint minted by this directory.
+     *
+     * The raw device remains inside the Android adapter layer and is never rendered, logged, or
+     * persisted. Non-BLE endpoints and observations from another directory fail closed.
+     */
+    fun resolve(endpoint: EndpointCandidate): BluetoothDevice? = synchronized(this) {
+        if (endpoint.transport != TransportKind.BLE) return@synchronized null
+        devicesByEndpoint[endpoint.ephemeralId]
     }
 
     /**

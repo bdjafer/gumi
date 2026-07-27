@@ -38,6 +38,13 @@ cancelling that scope stops projection collection. Android may render the result
 `StateFlow`, but the Activity, Service, and notification remain adapters rather than application-core
 owners.
 
+`PortableControlPlaneActionAdapter` closes the reusable product callback boundary. A host supplies
+collision-resistant command/correlation identities and an epoch clock; the adapter maps every
+`ShellControlAction` to its semantic intent and preserves the exact envelope for outcome-unknown retry.
+VoiceTurn, firmware update, and physical confirmation cannot dispatch without their matching typed
+qualification. Android and a future headless or Raspberry Pi shell therefore share command semantics
+without importing Compose, BLE, or device-specific firmware types.
+
 Stock Omi firmware does not currently provide qualified physical-output telemetry, so its composition
 must use `UnavailableShellDeviceOutputTruthPort`. A future custom-firmware adapter may map the reviewed
 portable human-I/O meanings into this port after session binding and HIL qualification. It must not map

@@ -1,0 +1,11 @@
+# sha256 source-relative-to-gumi destination-relative-to-upstream-omi-application
+2a01f629633a63b1e3bff556ee9ed014ac5078cfda90bcf0151a6b1995273e6e zephyr/omi-v3012/recording-root-provisioner-0001.conf gumi-recording-root-provisioner.conf
+d29f6c3b261e321c205b3be78b4b51e01d3e534dac62a5dc84b41a0258aa3780 include/gumi/recovery.h src/gumi/include/gumi/recovery.h
+875ccf5d7ef9e7a75b48d0f9422c93198c250a36273e47558182919d2b6fa9e5 src/recovery.c src/gumi/recovery.c
+922b054be612aae87539c273da97eb3d4e2c00d616598cdb398176d03fd7a09b zephyr/omi-v3012/include/gumi/omi_v3012_mic.h src/gumi/include/gumi/omi_v3012_mic.h
+86f0c32fff18fdde29c6dc73f87bad60cf25e6f760b0ce57c242592c1a39c2a5 zephyr/omi-v3012/include/gumi/omi_v3012_recovery.h src/gumi/include/gumi/omi_v3012_recovery.h
+59c5dc0f17735d9e53b972dac0798428dbc5c006c7ac8267f17c22bdf0151a1a zephyr/omi-v3012/include/gumi/omi_v3012_recording_root_provisioner.h src/gumi/include/gumi/omi_v3012_recording_root_provisioner.h
+0a1eb9f8e9748724f6b13071e19645803ef02730f3f93faa1fa21461fb70eafc zephyr/omi-v3012/src/mic_port.c src/gumi/zephyr/omi-v3012/mic_port.c
+feb40341f5904fa047cb8081f67377c9b01e55922853aa51b88fe7729be9a851 zephyr/omi-v3012/src/recovery_port.c src/gumi/zephyr/omi-v3012/recovery_port.c
+edff42262b809a9ba1fa2e96dd6a6e7a06f48d6a87c0c58ff0e8c258b682f064 zephyr/omi-v3012/src/recording_root_provisioner_port.c src/gumi/zephyr/omi-v3012/recording_root_provisioner_port.c
+8534f0523015f4715f39857402df0d5bdefc5c4fd1a9401f9a72285e8c69fa0b zephyr/omi-v3012/src/recording_root_provisioner_main.c src/gumi/zephyr/omi-v3012/recording_root_provisioner_main.c

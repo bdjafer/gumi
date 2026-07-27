@@ -1,0 +1,117 @@
+{
+  "owner": "devices/omi-cv1",
+  "release_schema": "gumi.omi-cv1.application-release/v1",
+  "release_id": "omi-cv1-v3012-gumi-recovery-only-0001-to-recording-root-provisioner-0001",
+  "intent": "application-image-0 one-shot recording-root provisioning",
+  "source": {
+    "upstream_tag": "Omi_CV1_v3.0.12",
+    "upstream_commit": "85159556eac753a088c5efd1b419a5a867508e27",
+    "application_image_index": 0,
+    "application_mcuboot_image_hash": "065be47c212f3c233bd683c780a5b1dfb583f7dbac932029d15d1fd1cf692d57",
+    "network_image_index": 1,
+    "network_mcuboot_image_hash": "267b11e2d413acebb874c76204be9f5f3872b9d033bd228ba5bcd46a27903089",
+    "mcuboot_version": "0.0.0+0"
+  },
+  "application_artifact": {
+    "identity": "gumi/Omi_CV1_v3.0.12/recording-root-provisioner-0001/omi.signed.bin",
+    "size_bytes": 113428,
+    "file_sha256": "e53c58a3ef72773af501a9ae05ceb5ce715b6d8153923ef52609dc5ec1dfa38b",
+    "image_index": 0,
+    "header_size_bytes": 512,
+    "payload_size_bytes": 112580,
+    "protected_tlv_size_bytes": 0,
+    "mcuboot_image_hash": "8a8eef711fd72707905bda05e08ddebc0de2a986d3c1d21b7469c92e7d32b12e",
+    "mcuboot_version": "0.0.0+0",
+    "compatibility_key_hash": "fc5701dc6135e1323847bdc40f04d2e5bee5833b23c29f93593d00018cfa9994",
+    "signature": "RSA-2048-PSS",
+    "security_counter": null,
+    "deterministic_prefix_bytes": 113172,
+    "signature_verified": true
+  },
+  "observable_identity": {
+    "device_information_firmware_revision": "3.0.12",
+    "device_information_software_revision": "gumi-recording-root-provisioner-0001",
+    "provisioner_service_uuid": "47554d49-0010-4f4d-492d-435631000001",
+    "status_characteristic_uuid": "47554d49-0010-4f4d-492d-435631000002",
+    "status_wire_size_bytes": 12,
+    "protocol_contract": "devices/omi-cv1/protocols/gatt/gumi-recording-root-provisioner-v1/profile.json",
+    "accepted_terminal_phases": [
+      "PROVISIONED",
+      "ALREADY_PRESENT"
+    ]
+  },
+  "behavior": {
+    "write_target": "HUK_KEYSLOT_MEXT only",
+    "root_bytes": 32,
+    "write_condition": "MEXT is not already written",
+    "root_or_derivative_exported": false,
+    "status_reports": "transport, microphone-off, write-attempt, MEXT-presence, derivation verification, and post-terminal mutation admission only",
+    "capture_permitted": false,
+    "recovery_transport_started_before_provisioning": true
+  },
+  "safety_boundary": {
+    "functional_capture_services_linked": false,
+    "stock_capture_or_storage_services_linked": false,
+    "microphone_start_command_linked": false,
+    "mkek_slot_access_linked": false,
+    "all_slot_random_writer_linked": false,
+    "root_zeroized_after_write": true,
+    "derivative_zeroized_after_verification": true,
+    "application_image_0_upload_only": true,
+    "network_image_upload_rejected_by_application": true,
+    "image_upload_and_remote_reset_denied_until_verified_terminal_state": true,
+    "os_reset_admission_hook_linked": true,
+    "mext_two_slot_power_loss_window_unavoidable": true,
+    "task_watchdog_timeout_ms": 15000,
+    "hardware_watchdog_fallback": true,
+    "destructive_settings_storage_erase_handler_linked": false,
+    "ble_management_authenticated": false,
+    "boot_policy": "overwrite-only",
+    "cryptographically_immutable_recovery": false
+  },
+  "build": {
+    "overlay_patch_sha256": "35a3ecb78465bee587ecc3ea1331d9c1deed7d212757b4a83f2ccc0e51c6cb1c",
+    "provisioner_config_sha256": "2a01f629633a63b1e3bff556ee9ed014ac5078cfda90bcf0151a6b1995273e6e",
+    "provisioner_source_manifest_sha256": "991dc25ff70746d6116a4d7afe9e266f2c7cb8619b8e5cf879401b5b47e1c9f6",
+    "materialized_cmake_sha256": "6a91f1c4a1233ee7abc31def4d907fd877f9cad96aee79519fad4be1bd7bc60a",
+    "ncs_version": "v2.9.0",
+    "nrf_commit": "7787b264984022cda64d9629278942053e6462a5",
+    "zephyr_commit": "1f8f3dc291420c70cd39e77a5cdc954561d4a08f",
+    "mcuboot_commit": "12e5ee106034972b0f1074d6f2261b2b39d1501b",
+    "zephyr_sdk": "0.17.0",
+    "toolchain_image": "ghcr.io/nrfconnect/sdk-nrf-toolchain:v2.9.0@sha256:7e9b61475ca05b8517079bedc8645479101fdaa17de2d0fa06a1633288112db2",
+    "partition_map_sha256": "b455f45133912e7d5e2d27a0cb40c018620bd101d164b14d8e805e0c1a0f30f9",
+    "partition_map_matches_canonical_stock_build": true
+  },
+  "qualification": {
+    "exact_board_full_composition_link": "pass",
+    "watchdog_symbol_and_configuration_gate": "pass",
+    "preterminal_mcumgr_mutation_gate": "pass",
+    "imgtool_version": "2.1.0",
+    "signature_result": "Image was correctly validated",
+    "performed_utc_date": "2026-07-24",
+    "device_was_contacted": false,
+    "behavioral_candidate": "offline-qualified; physical qualification pending"
+  },
+  "quarantined_build_outputs": [
+    {
+      "file": "zephyr.bin",
+      "reason": "unsigned application",
+      "size_bytes": 112580,
+      "sha256": "649ceea56045ba9a955801acb8d700e546da7d4aae8ba40de12579b93e452e73"
+    },
+    {
+      "file": "ipc_radio.bin",
+      "reason": "locally generated network image contains a non-published NSIB key",
+      "size_bytes": 174068,
+      "sha256": "f09e4b27f9cbf7edf350196f9c60e9cda786ace34e5b173bc2576dbed8479c7a"
+    },
+    {
+      "file": "dfu_application.zip",
+      "reason": "multi-image package includes the quarantined network image",
+      "size_bytes": 289750,
+      "sha256": "08c4ea0521c7f07eddfd2ad67b6d65f29c46175a44151cdc77cb6867414226d3"
+    }
+  ],
+  "artifact_conveys_physical_authorization": false
+}

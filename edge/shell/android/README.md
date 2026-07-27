@@ -59,12 +59,13 @@ source set and are never a production state source.
 The concrete integration gate remains deliberately open. A production composition must first publish a
 real `PortableControlPlane.presentation` from the process-owned runtime graph, with durable binding,
 endpoint/runtime factories, a freshness scheduler, and generation-coherent capture/storage/link facts.
-The Activity (or a separate product Activity) can then collect that flow with lifecycle awareness, route
-selection to `PortableControlPlane.select`, build fully identified intent-specific command envelopes in
-an Android application adapter, and route them through `PortableControlPlane.submit`. Update artifacts,
-VoiceTurn admission leases, and physical-confirmation leases require explicit reviewed workflows before
-their callbacks can dispatch. Until that graph exists, the surface stays unmounted and the diagnostic
-evidence console remains the launcher UI; debug fixtures must never bridge that gap.
+The Activity (or a separate product Activity) can then collect that flow with lifecycle awareness and
+route selection to `PortableControlPlane.select`. The host-neutral
+`PortableControlPlaneActionAdapter` now builds fully identified intent-specific envelopes, retains exact
+retries, and refuses VoiceTurn, update, or physical confirmation until the matching typed qualification
+is supplied. Android still has to provide UUID identities and the reviewed qualification workflows.
+Until the real graph exists, the surface stays unmounted and the diagnostic evidence console remains the
+launcher UI; debug fixtures must never bridge that gap.
 
 The discovery screen also contains a stock Omi address-stability diagnostic. The owner may capture
 one baseline only when exactly one current Omi candidate is visible. The baseline is held only by the

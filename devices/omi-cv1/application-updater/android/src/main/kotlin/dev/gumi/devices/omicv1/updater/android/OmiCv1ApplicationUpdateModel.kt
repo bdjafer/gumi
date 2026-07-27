@@ -5,8 +5,27 @@ import dev.gumi.edge.sdk.firmware.FirmwareImageHash
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal enum class OmiCv1ApplicationUpdateIntent {
-    MINIMAL_CANARY,
+    RECOVERY_ONLY,
     STOCK_RECOVERY,
+    CAPTURE_PORT_SELFTEST,
+    RECORDING_ROOT_PROVISIONER,
+    LEGACY_STORAGE_RECLAIMER,
+    FUNCTIONAL_RECORDING,
+}
+
+internal enum class OmiCv1ApplicationUploadMode {
+    STANDARD,
+
+    /**
+     * Escape hatch for functional-recording-0001 only.
+     *
+     * That image never initializes PSA when the consumer unit has no provisioned HUK, but its
+     * MCUmgr pre/post-upload SHA checks use PSA. The rescue transport therefore writes an exact
+     * signed image plus erased-value alignment bytes while advertising one additional byte that
+     * it deliberately never sends. Exact MCUboot slot-state inspection is still required before
+     * confirm/reset.
+     */
+    INCOMPLETE_FLASH_BLOCK_RESCUE,
 }
 
 internal enum class OmiCv1NetworkImageEvidencePolicy {
@@ -20,7 +39,7 @@ internal enum class OmiCv1NetworkImageEvidencePolicy {
     ALLOW_COMPLETELY_UNOBSERVED,
 }
 
-internal data class OmiCv1ApplicationArtifactManifest(
+internal data class OmiCv1McubootArtifactManifest(
     val identity: String,
     val fileSizeBytes: Int,
     val fileSha256: FirmwareImageHash,
@@ -31,20 +50,23 @@ internal data class OmiCv1ApplicationArtifactManifest(
     val signatureVerifiedOffline: Boolean,
 ) {
     init {
-        require(identity.isNotBlank()) { "Application artifact identity must not be blank" }
-        require(fileSizeBytes > 0) { "Application artifact must not be empty" }
+        require(identity.isNotBlank()) { "MCUboot artifact identity must not be blank" }
+        require(fileSizeBytes > 0) { "MCUboot artifact must not be empty" }
         require(payloadSizeBytes > 0 && payloadSizeBytes < fileSizeBytes) {
-            "Application payload size must fit inside its image"
+            "MCUboot payload size must fit inside its image"
         }
         require(mcubootVersion.isNotBlank()) { "MCUboot version must not be blank" }
         require(signatureVerifiedOffline) { "Only an independently verified artifact may be planned" }
-        fileSha256.requireSha256("Application file digest")
+        fileSha256.requireSha256("MCUboot file digest")
         mcubootImageHash.requireSha256("MCUboot image digest")
         compatibilityKeyHash.requireSha256("Compatibility key digest")
     }
 }
 
-internal data class OmiCv1ApplicationArtifactEvidence(
+/** Compatibility name retained for the closed application-image-0 update workflow. */
+internal typealias OmiCv1ApplicationArtifactManifest = OmiCv1McubootArtifactManifest
+
+internal data class OmiCv1McubootArtifactEvidence(
     val fileSizeBytes: Int,
     val fileSha256: FirmwareImageHash,
     val headerSizeBytes: Int,
@@ -54,11 +76,14 @@ internal data class OmiCv1ApplicationArtifactEvidence(
     val mcubootVersion: String,
 ) {
     init {
-        fileSha256.requireSha256("Observed application file digest")
+        fileSha256.requireSha256("Observed MCUboot file digest")
         mcubootImageHash.requireSha256("Observed MCUboot image digest")
         compatibilityKeyHash.requireSha256("Observed compatibility key digest")
     }
 }
+
+/** Compatibility name retained for the closed application-image-0 update workflow. */
+internal typealias OmiCv1ApplicationArtifactEvidence = OmiCv1McubootArtifactEvidence
 
 internal data class OmiCv1ExpectedActiveImages(
     val applicationHash: FirmwareImageHash,
@@ -78,10 +103,15 @@ internal data class OmiCv1ApplicationUpdateRelease(
     val releaseId: String,
     val intent: OmiCv1ApplicationUpdateIntent,
     val source: OmiCv1ExpectedActiveImages,
+    val sourceManufacturer: String,
     val target: OmiCv1ApplicationArtifactManifest,
+    val uploadMode: OmiCv1ApplicationUploadMode = OmiCv1ApplicationUploadMode.STANDARD,
 ) {
     init {
         require(releaseId.isNotBlank()) { "Application update release ID must not be blank" }
+        require(sourceManufacturer.isNotBlank()) {
+            "Application update source manufacturer must not be blank"
+        }
         require(source.mcubootVersion == target.mcubootVersion) {
             "Compatibility update must retain the installed MCUboot version"
         }
@@ -176,6 +206,11 @@ internal data class OmiCv1ApplicationUpdateValidation(
     val planId: String,
     val applicationHash: FirmwareImageHash,
     val networkImageObserved: Boolean,
+    val recoveryStatus: OmiCv1RecoveryStatusEvidence? = null,
+    val captureSelftestStatus: OmiCv1CaptureSelftestEvidence? = null,
+    val recordingRootProvisionerStatus: OmiCv1RecordingRootProvisionerStatusEvidence? = null,
+    val legacyStorageReclaimerStatus: OmiCv1LegacyStorageReclaimerStatusEvidence? = null,
+    val functionalStatus: OmiCv1FunctionalStatusEvidence? = null,
 )
 
 internal enum class OmiCv1ApplicationUpdateFailureCode {
@@ -189,6 +224,13 @@ internal enum class OmiCv1ApplicationUpdateFailureCode {
     PERMISSION_DENIED,
     BLUETOOTH_UNAVAILABLE,
     ENDPOINT_EXPIRED,
+    RECOVERY_EVIDENCE_REJECTED,
+    CAPTURE_SELFTEST_EVIDENCE_REJECTED,
+    RECORDING_ROOT_PROVISIONER_EVIDENCE_REJECTED,
+    LEGACY_STORAGE_RECLAIMER_EVIDENCE_REJECTED,
+    FUNCTIONAL_EVIDENCE_REJECTED,
+    STOCK_NORMALIZATION_STATE_REJECTED,
+    STOCK_NORMALIZATION_FAILED,
     TRANSPORT_FAILED,
 }
 

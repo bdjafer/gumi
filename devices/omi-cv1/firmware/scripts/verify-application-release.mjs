@@ -32,7 +32,7 @@ async function main(argv) {
     readFile(applicationPath),
   ]);
   const release = JSON.parse(releaseBytes.toString("utf8"));
-  expectEqual("release schema", release.release_schema, "gumi.omi-cv1.application-canary/v1");
+  expectEqual("release schema", release.release_schema, "gumi.omi-cv1.application-release/v1");
   expectEqual(
     "artifact authorization capability",
     release.artifact_conveys_physical_authorization,

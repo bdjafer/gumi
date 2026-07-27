@@ -2,7 +2,6 @@ package dev.gumi.devices.omicv1.updater.android
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
@@ -14,32 +13,10 @@ import dev.gumi.devices.omicv1.OmiCv1DriverProvider
 import dev.gumi.edge.sdk.EndpointCandidate
 import dev.gumi.edge.sdk.MatchConfidence
 import dev.gumi.edge.sdk.TransportKind
-import java.util.UUID
+import dev.gumi.edge.platforms.android.ble.AndroidBleEndpointDirectory
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-
-/** Process-local device bridge. Bluetooth addresses never enter UI state, logs, or persistence. */
-internal class OmiCv1FlashLabEndpointDirectory {
-    private data class Entry(val ephemeralId: String, val device: BluetoothDevice)
-
-    private val entriesByAddress = mutableMapOf<String, Entry>()
-    private val devicesByEndpoint = mutableMapOf<String, BluetoothDevice>()
-
-    @SuppressLint("MissingPermission")
-    fun observe(device: BluetoothDevice): String = synchronized(this) {
-        entriesByAddress.getOrPut(device.address) {
-            val endpointId = "ble:${UUID.randomUUID()}"
-            devicesByEndpoint[endpointId] = device
-            Entry(endpointId, device)
-        }.ephemeralId
-    }
-
-    fun resolve(endpoint: EndpointCandidate): BluetoothDevice? = synchronized(this) {
-        if (endpoint.transport != TransportKind.BLE) return@synchronized null
-        devicesByEndpoint[endpoint.ephemeralId]
-    }
-}
 
 internal data class OmiCv1FlashLabCandidate(
     internal val endpoint: EndpointCandidate,
@@ -59,7 +36,7 @@ internal fun interface OmiCv1FlashLabScanner {
 
 internal class AndroidOmiCv1FlashLabScanner(
     context: Context,
-    private val directory: OmiCv1FlashLabEndpointDirectory,
+    private val directory: AndroidBleEndpointDirectory,
     private val driver: OmiCv1DriverProvider = OmiCv1DriverProvider(),
 ) : OmiCv1FlashLabScanner {
     private val applicationContext = context.applicationContext

@@ -11,6 +11,48 @@ import kotlin.test.assertTrue
 
 class OmiCv1FirmwareOracleTest {
     @Test
+    fun `recognizes capture self-test application when network image is unobserved`() {
+        val assessment = OmiCv1KnownV3012FirmwareOracle.assess(
+            inspection(
+                activeImage(
+                    0,
+                    OmiCv1GumiCapturePortSelftest0001FirmwareOracle.APPLICATION_IMAGE_HASH,
+                    version = OmiCv1StockV3012FirmwareOracle.MCUMGR_WIRE_VERSION,
+                ),
+            ),
+        )
+
+        assertEquals(
+            OmiCv1FirmwareOracleStatus
+                .GUMI_CAPTURE_PORT_SELFTEST_APPLICATION_MATCH_NETWORK_UNOBSERVED,
+            assessment.status,
+        )
+        assertEquals(
+            OmiCv1GumiCapturePortSelftest0001FirmwareOracle.RELEASE_TAG,
+            assessment.releaseTag,
+        )
+    }
+
+    @Test
+    fun `recognizes recovery-only application when network image is unobserved`() {
+        val assessment = OmiCv1KnownV3012FirmwareOracle.assess(
+            inspection(
+                activeImage(
+                    0,
+                    OmiCv1GumiRecoveryOnly0001FirmwareOracle.APPLICATION_IMAGE_HASH,
+                    version = OmiCv1StockV3012FirmwareOracle.MCUMGR_WIRE_VERSION,
+                ),
+            ),
+        )
+
+        assertEquals(
+            OmiCv1FirmwareOracleStatus.GUMI_RECOVERY_APPLICATION_MATCH_NETWORK_UNOBSERVED,
+            assessment.status,
+        )
+        assertEquals(OmiCv1GumiRecoveryOnly0001FirmwareOracle.RELEASE_TAG, assessment.releaseTag)
+    }
+
+    @Test
     fun `matches the two published active images and ignores empty secondary slots`() {
         val assessment = OmiCv1StockV3012FirmwareOracle.assess(
             inspection(

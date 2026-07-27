@@ -1,0 +1,15 @@
+source "Kconfig.zephyr"
+
+config OMI_CODEC_OPUS
+    bool "Pinned Omi Opus codec"
+    default y
+
+if BOARD_OMI_NRF5340_CPUAPP || BOARD_OMI_NRF5340_CPUAPP_NS
+
+config DOMAIN_CPUNET_BOARD
+    string
+    default "omi/nrf5340/cpunet"
+    help
+      Exact Omi network-core board used by the NCS Bluetooth child image.
+
+endif

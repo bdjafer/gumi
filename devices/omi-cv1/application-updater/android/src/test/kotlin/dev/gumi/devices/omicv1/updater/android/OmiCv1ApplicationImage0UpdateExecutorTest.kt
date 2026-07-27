@@ -43,6 +43,41 @@ class OmiCv1ApplicationImage0UpdateExecutorTest {
     }
 
     @Test
+    fun `executor passes the release-bound rescue mode to the only upload call`() = runTest {
+        val base = preparedPlan()
+        val rescueRelease = base.release.copy(
+            uploadMode = OmiCv1ApplicationUploadMode.INCOMPLETE_FLASH_BLOCK_RESCUE,
+        )
+        val prepared = OmiCv1ApplicationUpdatePlanner.prepare(
+            base.endpoint,
+            stableInspection(base.endpoint, rescueRelease.source),
+            rescueRelease,
+            base.copyImageBytes(),
+        )
+        val session = FakeSession(
+            inspections = ArrayDeque(
+                listOf(
+                    stableInspection(prepared.endpoint, rescueRelease.source),
+                    stagedInspection(prepared.endpoint, rescueRelease),
+                    stagedInspection(prepared.endpoint, rescueRelease, confirmed = true),
+                ),
+            ),
+        )
+        val executor = OmiCv1ApplicationImage0UpdateExecutor(
+            sessions = OmiCv1ApplicationImage0UpdateSessionFactory { session },
+            clock = MonotonicMillisClock { 100 },
+        )
+
+        executor.execute(authorization(prepared)) {}
+
+        assertEquals(
+            OmiCv1ApplicationUploadMode.INCOMPLETE_FLASH_BLOCK_RESCUE,
+            session.uploadMode,
+        )
+        assertEquals(1, session.calls.count { it == "upload" })
+    }
+
+    @Test
     fun `expired authorization opens no transport`() = runTest {
         val prepared = preparedPlan()
         var opened = false
@@ -202,7 +237,11 @@ class OmiCv1ApplicationImage0UpdateExecutorTest {
         val session = object : OmiCv1ApplicationImage0UpdateSession {
             val calls = mutableListOf<String>()
 
-            override suspend fun upload(imageBytes: ByteArray, onProgress: (Int, Int) -> Unit) {
+            override suspend fun upload(
+                imageBytes: ByteArray,
+                mode: OmiCv1ApplicationUploadMode,
+                onProgress: (Int, Int) -> Unit,
+            ) {
                 calls += "upload"
                 uploadStarted.complete(Unit)
                 neverCompletes.await()
@@ -211,6 +250,10 @@ class OmiCv1ApplicationImage0UpdateExecutorTest {
             override suspend fun inspect(): FirmwareImageStateInspection {
                 calls += "inspect"
                 return stableInspection(prepared.endpoint, prepared.release.source)
+            }
+
+            override suspend fun eraseInactiveApplicationSlot() {
+                calls += "erase"
             }
 
             override suspend fun confirm(mcubootImageHash: FirmwareImageHash) {
@@ -263,15 +306,25 @@ class OmiCv1ApplicationImage0UpdateExecutorTest {
         private val inspections: ArrayDeque<FirmwareImageStateInspection>,
     ) : OmiCv1ApplicationImage0UpdateSession {
         val calls = mutableListOf<String>()
+        var uploadMode: OmiCv1ApplicationUploadMode? = null
 
-        override suspend fun upload(imageBytes: ByteArray, onProgress: (Int, Int) -> Unit) {
+        override suspend fun upload(
+            imageBytes: ByteArray,
+            mode: OmiCv1ApplicationUploadMode,
+            onProgress: (Int, Int) -> Unit,
+        ) {
             calls += "upload"
+            uploadMode = mode
             onProgress(imageBytes.size, imageBytes.size)
         }
 
         override suspend fun inspect(): FirmwareImageStateInspection {
             calls += "inspect"
             return inspections.removeFirst()
+        }
+
+        override suspend fun eraseInactiveApplicationSlot() {
+            calls += "erase"
         }
 
         override suspend fun confirm(mcubootImageHash: FirmwareImageHash) {

@@ -293,6 +293,67 @@ static void test_base_stop_keeps_privacy_until_finalization_and_release(void)
     tests_run += 1U;
 }
 
+static void test_base_stop_finalize_failure_reports_interrupted_recording(void)
+{
+    gumi_capture_supervisor state = operational_idle();
+    gumi_capture_result result;
+    uint64_t recording_id = start_base_recording(&state, 1U);
+    uint64_t transition_id;
+
+    CHECK_STATUS(gumi_capture_request_base_stop(&state, 10U, &result), 0);
+    transition_id = state.transition_id;
+    expect_action(
+        &result,
+        0U,
+        GUMI_CAPTURE_ACTION_FINALIZE_LOCAL_RECORDING,
+        transition_id
+    );
+    CHECK_STATUS(
+        gumi_capture_complete(
+            &state,
+            11U,
+            transition_id,
+            GUMI_CAPTURE_COMPLETION_LOCAL_RECORDING_INTERRUPTED,
+            &result
+        ),
+        0
+    );
+    expect_action(
+        &result,
+        0U,
+        GUMI_CAPTURE_ACTION_RELEASE_MICROPHONE,
+        transition_id
+    );
+    CHECK_STATUS(
+        gumi_capture_complete(
+            &state,
+            12U,
+            transition_id,
+            GUMI_CAPTURE_COMPLETION_MICROPHONE_RELEASED,
+            &result
+        ),
+        0
+    );
+    expect_action(
+        &result,
+        0U,
+        GUMI_CAPTURE_ACTION_DEASSERT_PRIVACY_GUARD,
+        transition_id
+    );
+    expect_event(
+        &result,
+        0U,
+        GUMI_CAPTURE_EVENT_BASE_RECORDING_STOPPED,
+        GUMI_CAPTURE_REASON_LOCAL_DURABILITY_UNAVAILABLE
+    );
+    CHECK(result.events[0].recording_id == recording_id);
+    CHECK(result.haptic == GUMI_CAPTURE_HAPTIC_FAULT);
+    CHECK(state.phase == GUMI_CAPTURE_PHASE_IDLE);
+    CHECK(state.fault == GUMI_CAPTURE_FAULT_RECOVERABLE);
+    CHECK(state.mic_truth == GUMI_CAPTURE_MIC_VERIFIED_OFF);
+    tests_run += 1U;
+}
+
 static void test_voice_from_idle_waits_for_every_effect_and_lease(void)
 {
     gumi_capture_supervisor state = operational_idle();
@@ -352,6 +413,42 @@ static void test_voice_from_idle_waits_for_every_effect_and_lease(void)
     CHECK(gumi_capture_voice_audio_is_permitted(&state));
     expect_event(&result, 0U, GUMI_CAPTURE_EVENT_VOICE_TURN_STARTED, GUMI_CAPTURE_REASON_NONE);
     CHECK(result.haptic == GUMI_CAPTURE_HAPTIC_VOICE_READY);
+    CHECK_STATUS(gumi_capture_request_voice_end(&state, 20U, &result), 0);
+    transition_id = state.transition_id;
+    CHECK(result.action_count == 3U);
+    expect_action(
+        &result, 0U, GUMI_CAPTURE_ACTION_CLOSE_REALTIME_ROUTE, transition_id
+    );
+    expect_action(
+        &result, 1U, GUMI_CAPTURE_ACTION_RELEASE_MICROPHONE, transition_id
+    );
+    expect_action(
+        &result, 2U, GUMI_CAPTURE_ACTION_FINALIZE_LOCAL_RECORDING, transition_id
+    );
+    CHECK_STATUS(
+        gumi_capture_complete(
+            &state, 21U, transition_id,
+            GUMI_CAPTURE_COMPLETION_REALTIME_ROUTE_CLOSED, &result
+        ), 0
+    );
+    CHECK_STATUS(
+        gumi_capture_complete(
+            &state, 22U, transition_id,
+            GUMI_CAPTURE_COMPLETION_MICROPHONE_RELEASED, &result
+        ), 0
+    );
+    CHECK_STATUS(
+        gumi_capture_complete(
+            &state, 23U, transition_id,
+            GUMI_CAPTURE_COMPLETION_LOCAL_RECORDING_FINALIZED, &result
+        ), 0
+    );
+    expect_event(
+        &result, 0U, GUMI_CAPTURE_EVENT_VOICE_TURN_ENDED,
+        GUMI_CAPTURE_REASON_NONE
+    );
+    CHECK(state.phase == GUMI_CAPTURE_PHASE_IDLE);
+    CHECK(!state.local_recording_open);
     tests_run += 1U;
 }
 
@@ -499,7 +596,13 @@ static void test_lease_expiry_at_commit_cancels_and_invalidates_old_transition(v
         GUMI_CAPTURE_EVENT_VOICE_TURN_REFUSED,
         GUMI_CAPTURE_REASON_REALTIME_ADMISSION_EXPIRED
     );
-    CHECK(result.action_count == 2U);
+    CHECK(result.action_count == 3U);
+    expect_action(
+        &result,
+        2U,
+        GUMI_CAPTURE_ACTION_COMMIT_LAST_DURABLE_FRAME,
+        stop_transition
+    );
     CHECK(!gumi_capture_voice_audio_is_permitted(&state));
 
     before = state;
@@ -522,6 +625,13 @@ static void test_lease_expiry_at_commit_cancels_and_invalidates_old_transition(v
         gumi_capture_complete(
             &state, 17U, stop_transition,
             GUMI_CAPTURE_COMPLETION_MICROPHONE_RELEASED, &result
+        ),
+        0
+    );
+    CHECK_STATUS(
+        gumi_capture_complete(
+            &state, 18U, stop_transition,
+            GUMI_CAPTURE_COMPLETION_LAST_DURABLE_FRAME_COMMITTED, &result
         ),
         0
     );
@@ -693,6 +803,41 @@ static void test_storage_full_stops_only_after_durable_boundary(void)
     tests_run += 1U;
 }
 
+static void test_microphone_pipeline_failure_does_not_falsify_storage_health(void)
+{
+    gumi_capture_supervisor state = operational_idle();
+    gumi_capture_result result;
+    uint64_t transition_id;
+
+    (void)start_base_recording(&state, 1U);
+    CHECK_STATUS(
+        gumi_capture_recoverable_pipeline_failed(
+            &state,
+            10U,
+            GUMI_CAPTURE_REASON_MICROPHONE_UNAVAILABLE,
+            &result
+        ),
+        0
+    );
+    transition_id = state.transition_id;
+    CHECK(state.storage == GUMI_CAPTURE_STORAGE_HEALTHY);
+    CHECK(state.fault == GUMI_CAPTURE_FAULT_RECOVERABLE);
+    CHECK(!gumi_capture_base_audio_is_permitted(&state));
+    expect_action(
+        &result,
+        0U,
+        GUMI_CAPTURE_ACTION_COMMIT_LAST_DURABLE_FRAME,
+        transition_id
+    );
+    expect_event(
+        &result,
+        0U,
+        GUMI_CAPTURE_EVENT_SAFE_CAPTURE_STOP_REQUESTED,
+        GUMI_CAPTURE_REASON_MICROPHONE_UNAVAILABLE
+    );
+    tests_run += 1U;
+}
+
 static void test_storage_failure_cancels_a_start_before_it_can_commit(void)
 {
     gumi_capture_supervisor state = operational_idle();
@@ -785,7 +930,7 @@ static void test_storage_failure_stops_voice_from_idle(void)
         ), 0
     );
     stop_transition = state.transition_id;
-    CHECK(result.action_count == 2U);
+    CHECK(result.action_count == 3U);
     CHECK(!gumi_capture_voice_audio_is_permitted(&state));
     expect_event(
         &result,
@@ -803,6 +948,12 @@ static void test_storage_failure_stops_voice_from_idle(void)
         gumi_capture_complete(
             &state, 22U, stop_transition,
             GUMI_CAPTURE_COMPLETION_MICROPHONE_RELEASED, &result
+        ), 0
+    );
+    CHECK_STATUS(
+        gumi_capture_complete(
+            &state, 23U, stop_transition,
+            GUMI_CAPTURE_COMPLETION_LAST_DURABLE_FRAME_COMMITTED, &result
         ), 0
     );
     expect_event(
@@ -829,6 +980,12 @@ static void test_active_privacy_failure_closes_audio_before_forcing_release(void
     CHECK(state.mic_truth == GUMI_CAPTURE_MIC_UNKNOWN);
     CHECK(gumi_capture_privacy_pattern_for(&state) == GUMI_CAPTURE_PRIVACY_OUTPUT_UNAVAILABLE);
     expect_action(&result, 0U, GUMI_CAPTURE_ACTION_RELEASE_MICROPHONE, transition_id);
+    expect_action(
+        &result,
+        1U,
+        GUMI_CAPTURE_ACTION_COMMIT_LAST_DURABLE_FRAME,
+        transition_id
+    );
     expect_event(
         &result,
         0U,
@@ -843,6 +1000,13 @@ static void test_active_privacy_failure_closes_audio_before_forcing_release(void
         0
     );
     CHECK(result.action_count == 0U);
+    CHECK_STATUS(
+        gumi_capture_complete(
+            &state, 12U, transition_id,
+            GUMI_CAPTURE_COMPLETION_LAST_DURABLE_FRAME_COMMITTED, &result
+        ),
+        0
+    );
     expect_event(
         &result,
         0U,
@@ -930,6 +1094,7 @@ int main(void)
     test_guard_failure_refuses_before_any_microphone_action();
     test_microphone_acquire_failure_refuses_and_verifies_release();
     test_base_stop_keeps_privacy_until_finalization_and_release();
+    test_base_stop_finalize_failure_reports_interrupted_recording();
     test_voice_from_idle_waits_for_every_effect_and_lease();
     test_durability_prepare_failure_closes_voice_resources();
     test_missing_or_expired_voice_admission_is_a_non_mutating_refusal();
@@ -938,6 +1103,7 @@ int main(void)
     test_voice_overlay_preserves_base_identity_and_never_releases_microphone();
     test_realtime_route_failure_preserves_base_recording();
     test_storage_full_stops_only_after_durable_boundary();
+    test_microphone_pipeline_failure_does_not_falsify_storage_health();
     test_storage_failure_cancels_a_start_before_it_can_commit();
     test_storage_failure_stops_voice_from_idle();
     test_active_privacy_failure_closes_audio_before_forcing_release();

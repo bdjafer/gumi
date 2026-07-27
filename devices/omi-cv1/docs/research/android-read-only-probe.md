@@ -85,7 +85,7 @@ sheet performs no BLE operation; its explicit run action remains separate from o
 1. Scan for the same pendant and tap `Review MCU image-state read`.
 2. Before approval, verify the card discloses the exact transient operations:
    - connect and discover the SMP service;
-   - request ATT MTU 23, preserving the Pass A baseline;
+   - request ATT MTU 498, the already qualified ceiling of both recovered stock and recovery-only;
    - write the SMP CCCD to enable response notifications;
    - send MCU Manager parameters READ, group `0`, command `6`;
    - send MCUboot image-state READ, group `1`, command `0`; and
@@ -135,6 +135,15 @@ network image or either secondary-slot state. Gumi therefore reports
 `APPLICATION_MATCH_NETWORK_UNOBSERVED`: exact application identity, explicitly incomplete network
 identity.
 
+The same result was re-established after the separately authorized identity-canary recovery. Flash
+Lab first reached `VALIDATED` on the exact stock application hash, and an independent provenance-bound
+Gumi attempt then returned one active/bootable/confirmed/not-pending application row with hash
+`0eed1a42063975be5f8aee0e0df710122de445f7473681ba780bdcdad2fe7b36`. Image `1` remained wholly
+unobserved. The independent image-state log, screenshot, and manifest SHA-256 values are respectively
+`6f1a8d315857f5624210aff7029358c0f2df163a4bdc7da3770a4827da30ad89`,
+`9e9413fd2c40dfc90e4edefd6ba629eae7692aa502ffabca51390129a734161a`, and
+`69a2e735e4191a2cf09d8ca00452c1727062f75762f1f9c05bf381b48527743c`.
+
 ## Pass C: observation-only behavior
 
 With Gumi disconnected:
@@ -157,8 +166,8 @@ path, or a pairing dependency. In particular, the later successful audio session
 
 Pinned v3.0.12 source intends P0.26, active-low with pull-up and a level-low interrupt, to restart the
 device from system-off. The sealed-unit observation contradicts that intended user-visible result and
-is therefore a stock power/wake qualification gap, not evidence that Gumi firmware is installed. No
-firmware write occurred.
+is therefore a stock power/wake qualification gap, not evidence that Gumi firmware was installed. At
+the time of that observation, no firmware write had occurred.
 
 ## Bounded post-image audio metadata witness
 
@@ -180,17 +189,20 @@ accepted the value or delivered the expected boundaries.
 
 Source audit: BasedHardware/omi `main` at
 [`ae38a649c086b08814de45e3bbe189c107f60318`](https://github.com/BasedHardware/omi/blob/ae38a649c086b08814de45e3bbe189c107f60318/app/android/app/src/main/kotlin/com/friend/ios/ble/OmiBleForegroundService.kt),
-2026-07-19 (`MTU_SIZE = 512`, requested after discovery). The Pass A inventory and Pass B image read
-remain unchanged at the no-request/MTU-23 baselines documented above.
+2026-07-19 (`MTU_SIZE = 512`, requested after discovery). Pass A remains an MTU-23 inventory baseline.
+The original recovered-stock Pass B also completed at MTU 23, but a fresh recovery-only connection
+proved that Nordic Device Manager cannot carry the larger image-state response in that envelope and
+raised `InsufficientMtuException`. The current Pass B therefore requests the already qualified 498-byte
+ceiling; this is transient link negotiation, not persistent device mutation.
 
 ### Owned-unit audio result, 2026-07-20
 
-Attempt 2 completed as `AUDIO_METADATA_QUALIFIED` and closed the stream, device session, and BLE
-transport before publishing its result:
+Recovered-stock attempt 1 completed as `AUDIO_METADATA_QUALIFIED` and closed the stream, device
+session, and BLE transport before publishing its result:
 
-- 532 frames and 49,134 aggregate payload bytes over a 9,999 ms receive span;
-- payload bounds 71–120 bytes, sequence 0–531, zero gaps, zero discontinuities, and maximum
-  interarrival 172 ms;
+- 536 frames and 41,534 aggregate payload bytes over a 9,994 ms receive span;
+- payload bounds 62–110 bytes, sequence 0–535, zero gaps, zero discontinuities, and maximum
+  interarrival 144 ms;
 - Opus / 16 kHz / mono / raw Opus packet, configuration `23`, one 20 ms frame, and 960 decoded samples
   at 48 kHz;
 - negotiated MTU 498, LE 2M transmit/receive, and `NOT_BONDED`; and
@@ -198,9 +210,9 @@ transport before publishing its result:
   endpoint ID, Android serial/ID/fingerprint, file/database persistence, or upload.
 
 The transactional bundle's log SHA-256 is
-`41e0eb10c3faf616b6cb066cfc8aea490fdc703811185d923cf6cfe2f63559c2`, screenshot SHA-256 is
-`d31fd13a678c216049d82293f44521fa7d386f228255593912add31b6f725d96`, and manifest SHA-256 is
-`cf0e90fbec1166e73ba1ed7f51362d4d46f5335cae7a820a06e96af74ad9ffd2`.
+`6377f6873dd446e485de09491008fa7a92ab53d2aded908c64b7db136a6b66dd`, screenshot SHA-256 is
+`e698816db28e75c8fa5dbb8dfa72c82682f1a0e4b5b07b783e61b75d3e6c454e`, and manifest SHA-256 is
+`fee30920c5dc3e081433840512d788ced54692b89978d3c8eb36964762453579`.
 
 For a later `AUDIO_SETUP_TIMEOUT`, first establish whether the pendant is physically awake. Charger
 insertion is the only recovery demonstrated on this particular stock unit. A timeout is not evidence

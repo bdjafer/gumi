@@ -38,7 +38,7 @@ performed. The procedure did install or replace the Gumi debug app on the phone 
   address and Gumi endpoint reference are never rendered, logged, persisted, or added to evidence.
 
 The semantic image-state read does require temporary on-air writes: enabling SMP notifications and
-sending MCU Manager READ requests. It requests ATT MTU 23 and disconnects immediately after the
+sending MCU Manager READ requests. It requests ATT MTU 498 and disconnects immediately after the
 response. No persistent Omi mutation is expected; the separate phone-side Gumi installation is
 explicitly disclosed below.
 
@@ -119,7 +119,7 @@ explicitly disclosed below.
 
 10. On the same retained Omi card, tap **Review MCU image-state read**. A dedicated owner-review sheet
    opens; no BLE operation starts merely by opening it.
-11. Verify that the sheet discloses SMP discovery, ATT MTU 23, the response-notification CCCD write,
+11. Verify that the sheet discloses SMP discovery, ATT MTU 498, the response-notification CCCD write,
    parameter READ `0/6`, image-state READ `1/0`, disconnect/release, no expected persistent mutation,
    and no upload/test/confirm/reset/erase/files/settings/shell operation. Then tap
    **Run disclosed image-state read** exactly once.

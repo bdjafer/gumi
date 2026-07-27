@@ -10,6 +10,8 @@ internal data class OmiCv1FlashLabPhonePower(
     val charging: Boolean,
 ) {
     val adequateForUpdate: Boolean get() = percent != null && percent >= MIN_PHONE_BATTERY_PERCENT
+    val adequateForReadOnlyCapture: Boolean
+        get() = percent != null && percent >= MIN_PHONE_READ_ONLY_CAPTURE_PERCENT
 }
 
 internal fun interface OmiCv1FlashLabPhonePowerSource {
@@ -35,4 +37,5 @@ internal class AndroidOmiCv1FlashLabPhonePowerSource(context: Context) :
     }
 }
 
-internal const val MIN_PHONE_BATTERY_PERCENT = 80
+internal const val MIN_PHONE_BATTERY_PERCENT = 60
+internal const val MIN_PHONE_READ_ONLY_CAPTURE_PERCENT = 20

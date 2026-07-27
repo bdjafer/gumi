@@ -1,0 +1,127 @@
+{
+  "owner": "devices/omi-cv1",
+  "profile_schema": "gumi.legacy-storage-reclaimer-gatt/v1",
+  "evidence_kind": "firmware_declared_exact_board_link_qualified",
+  "physical_observation": false,
+  "firmware": {
+    "profile": "legacy-storage-reclaimer-0002",
+    "upstream_base_commit": "85159556eac753a088c5efd1b419a5a867508e27",
+    "advertised_name": "Gumi",
+    "manufacturer": "Gumi",
+    "model": "Omi CV 1",
+    "firmware_revision": "3.0.12",
+    "software_revision": "gumi-legacy-storage-reclaimer-0002",
+    "hardware_revision": "5.0"
+  },
+  "services": {
+    "family_discriminator": {
+      "uuid": "19b10000-e8f2-537e-4f6c-d104768a1214",
+      "characteristics": []
+    },
+    "recovery_status": {
+      "uuid": "796e0485-8f9d-4063-af3b-f5596fced74a"
+    },
+    "legacy_storage_reclaimer": {
+      "uuid": "47554d49-0011-4f4d-492d-435631000001",
+      "characteristics": [
+        {
+          "name": "status",
+          "uuid": "47554d49-0011-4f4d-492d-435631000002",
+          "properties": [
+            "read",
+            "notify"
+          ],
+          "size_bytes": 40
+        }
+      ]
+    }
+  },
+  "status": {
+    "version": 1,
+    "byte_order": "little_endian",
+    "size_bytes": 40,
+    "fields": [
+      {"name": "version", "offset": 0, "size": 1, "type": "u8"},
+      {"name": "phase", "offset": 1, "size": 1, "type": "u8"},
+      {"name": "flags", "offset": 2, "size": 2, "type": "u16"},
+      {"name": "last_error", "offset": 4, "size": 4, "type": "i32"},
+      {"name": "generation", "offset": 8, "size": 4, "type": "u32"},
+      {"name": "target_size_bytes", "offset": 12, "size": 8, "type": "u64"},
+      {"name": "free_bytes_before", "offset": 20, "size": 8, "type": "u64"},
+      {"name": "free_bytes_after", "offset": 28, "size": 8, "type": "u64"},
+      {"name": "reserved_zero", "offset": 36, "size": 4, "type": "u32"}
+    ],
+    "phases": {
+      "cold": 0,
+      "safe_transport_ready": 1,
+      "inspecting": 2,
+      "reclaiming": 3,
+      "reclaimed": 4,
+      "already_absent": 5,
+      "refused": 6,
+      "failed": 7
+    },
+    "flags": {
+      "transport_ready": 1,
+      "microphone_verified_off": 2,
+      "volume_mounted": 4,
+      "target_observed": 8,
+      "target_exact": 16,
+      "delete_attempted": 32,
+      "target_absent": 64,
+      "minimum_free_proven": 128,
+      "mutation_admitted": 256
+    },
+    "accepted_success_states": {
+      "reclaimed": {
+        "phase": 4,
+        "required_flags": 511,
+        "last_error": 0,
+        "target_size_bytes": 505118720,
+        "minimum_free_bytes_after": 4194304
+      },
+      "already_absent": {
+        "phase": 5,
+        "required_flags": 455,
+        "last_error": 0,
+        "target_size_bytes": 0,
+        "minimum_free_bytes_after": 4194304
+      }
+    },
+    "non_success_terminal_states": [
+      "refused",
+      "failed"
+    ]
+  },
+  "filesystem_policy": {
+    "mount_point": "/SD:",
+    "mount_no_format": true,
+    "caller_controlled_path": false,
+    "recursive_delete": false,
+    "only_target": "/SD:/audio/a01.txt",
+    "required_target_type": "regular_file",
+    "required_target_size_bytes": 505118720,
+    "minimum_free_bytes_after": 4194304
+  },
+  "ota": {
+    "transport": "mcumgr_ble",
+    "application_image": 0,
+    "network_image_admitted": false,
+    "recovery_transport_started_before_inspection": true,
+    "preterminal_image_upload_denied": true,
+    "preterminal_remote_reset_denied": true,
+    "terminal_mutation_admission_reported_in_status": true,
+    "sd_power_remains_asserted_for_shared_spi3_handoff": true
+  },
+  "privacy": {
+    "microphone_verified_off_before_storage_inspection": true,
+    "capture_permitted": false,
+    "audio_content_read": false,
+    "audio_content_exported": false
+  },
+  "liveness": {
+    "task_watchdog_timeout_ms": 15000,
+    "hardware_watchdog_fallback": true,
+    "watchdog_armed_before_transport_and_storage_access": true
+  }
+}

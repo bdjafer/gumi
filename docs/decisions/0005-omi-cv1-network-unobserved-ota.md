@@ -37,6 +37,15 @@ Network immutability is protected by the write boundary, not claimed as a physic
 - repository verification audits both the source API boundary and packaged APK contents; and
 - every state read rejects visible contradictory network evidence.
 
+## Execution result
+
+On 2026-07-20, the owner separately authorized and completed both permitted transitions. Fresh
+post-reboot reads observed the exact canary application hash and then the exact recovered-stock
+application hash, each active, bootable, confirmed, and not pending. Canary identity/indicator/GATT/
+audio and recovered-stock driver/GATT/audio checks passed. Image `1` remained wholly unobserved in
+every state read, so the result is recorded as one successful application-only forward/recovery cycle,
+not as an observed network-hash match or generic OTA qualification.
+
 ## Accepted risk
 
 This decision cannot prove the installed network bytes or an invisible network-secondary state. It

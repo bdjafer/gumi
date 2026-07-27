@@ -1,8 +1,9 @@
 # Gumi recording journal v1
 
-Status: portable framing and recovery kernel implemented and host-qualified. The PSA Crypto and Zephyr
-SD adapters are not implemented or target-qualified yet. This format is not a firmware or flash
-candidate by itself.
+Status: portable framing/recovery and transactional-store kernels are host-qualified. The PSA Crypto
+and no-format Zephyr SD adapters compile and link with the full functional composition on the exact
+pinned Omi CV1 board. Physical retained-file recovery and recording behavior remain unqualified until
+the signed application is exercised on the owned device.
 
 ## Boundary
 
@@ -101,7 +102,9 @@ Preparation is successful only after the adapter has:
 
 1. powered and initialized the existing SD controller;
 2. mounted with `FS_MOUNT_FLAG_NO_FORMAT` and without any explicit formatting fallback;
-3. authenticated every retained `.GMR` and recoverable `.PRT` prefix needed for admission;
+3. authenticated every retained `.GMR` and recoverable `.PRT` prefix needed for admission; `.GMR`
+   must end in an authenticated commit with no trailing bytes, while `.PRT` may retain an
+   unauthenticated torn tail that is never counted, exposed, renamed, or modified;
 4. checked free capacity with `fs_statvfs` against the qualified warning and finalization reserve;
 5. acquired the recording key and fresh nonce/session material;
 6. created a new `.PRT`, written the exact 64-byte header, called `fs_sync`, and issued
@@ -112,6 +115,11 @@ latency, and loss-window policy; it is not hard-coded by the format. Normal fina
 codec and storage queues, appends and authenticates the commit record, syncs the file, syncs the disk,
 closes the file, verifies that the `.GMR` destination is absent, renames `.PRT` to `.GMR`, and syncs the
 disk again. Only then may the capture supervisor receive `LOCAL_RECORDING_FINALIZED`.
+
+If normal finalization fails but the adapter can still stop new packets and durably close the last
+complete authenticated prefix as `.PRT`, it reports `LOCAL_RECORDING_INTERRUPTED`. The supervisor
+then releases the microphone but records a recoverable durability fault; it never relabels the
+interrupted artifact as a completed recording.
 
 If durability fails during active capture, the adapter gates new packets, syncs the last complete
 authenticated record prefix if possible, leaves the file as `.PRT`, and reports

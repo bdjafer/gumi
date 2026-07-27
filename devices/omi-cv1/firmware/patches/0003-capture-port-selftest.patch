@@ -1,0 +1,47 @@
+diff --git a/omi/firmware/omi/CMakeLists.txt b/omi/firmware/omi/CMakeLists.txt
+--- a/omi/firmware/omi/CMakeLists.txt
++++ b/omi/firmware/omi/CMakeLists.txt
+@@ -4,30 +4,20 @@ enable_language(C ASM) # OPUS
+ 
+ project(omi)
+ 
+-file(GLOB app_sources
+-    src/main.c
+-    src/mic.c
+-    src/battery.c
+-    src/led.c
+-    src/haptic.c
+-    src/sd_card.c
+-    src/spi_flash.c
+-    src/settings.c
+-    src/feedback.c
+-)
+-file(GLOB core_sources
+-    src/lib/core/config.h
+-    src/lib/core/codec.c
+-    src/lib/core/transport.c
+-    src/lib/core/button.c
+-    src/lib/core/monitor.c
++# Diagnostic capture-port stage: no stock functional source is linked here.
++target_sources(app PRIVATE
++    src/gumi/button.c
++    src/gumi/capture_selftest.c
++    src/gumi/zephyr/omi-v3012/mic_port.c
++    src/gumi/zephyr/omi-v3012/codec_port.c
++    src/gumi/zephyr/omi-v3012/capture_selftest_io.c
++    src/gumi/zephyr/omi-v3012/capture_selftest_transport.c
++    src/gumi/zephyr/omi-v3012/capture_selftest_main.c
+ )
+-
+-if(CONFIG_OMI_ENABLE_OFFLINE_STORAGE)
+-    list(APPEND core_sources src/lib/core/storage.c)
+-endif()
+-
+-target_sources(app PRIVATE ${core_sources} ${app_sources})
++target_include_directories(app PRIVATE
++    src/gumi/include
++    src/lib/core/lib/opus-1.2.1
++)
+ 
+ if(CONFIG_OMI_CODEC_OPUS)
+     add_subdirectory(src/lib/core/lib/opus-1.2.1/)

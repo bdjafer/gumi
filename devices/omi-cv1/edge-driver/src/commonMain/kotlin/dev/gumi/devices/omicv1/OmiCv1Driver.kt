@@ -31,6 +31,7 @@ object OmiCv1Protocol {
     const val DRIVER_ID = "gumi.device.omi-cv1"
     const val AUDIO_SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214"
     const val OFFLINE_STORAGE_SERVICE_UUID = "30295780-4301-eabd-2904-2849adfeae43"
+    const val FUNCTIONAL_SERVICE_UUID = OmiCv1FunctionalGattV1.SERVICE_UUID
 }
 
 class OmiCv1DriverProvider : DeviceDriverProvider {
@@ -41,6 +42,8 @@ class OmiCv1DriverProvider : DeviceDriverProvider {
 
         val normalizedServices = candidate.advertisedServiceUuids.map { it.lowercase() }.toSet()
         val matchedService = when {
+            OmiCv1Protocol.FUNCTIONAL_SERVICE_UUID in normalizedServices ->
+                OmiCv1Protocol.FUNCTIONAL_SERVICE_UUID
             OmiCv1Protocol.AUDIO_SERVICE_UUID in normalizedServices -> OmiCv1Protocol.AUDIO_SERVICE_UUID
             OmiCv1Protocol.OFFLINE_STORAGE_SERVICE_UUID in normalizedServices ->
                 OmiCv1Protocol.OFFLINE_STORAGE_SERVICE_UUID
@@ -106,13 +109,16 @@ class OmiCv1DriverProvider : DeviceDriverProvider {
     private suspend fun openNegotiated(
         candidate: EndpointCandidate,
         ble: BleTransportSession,
-    ): OmiCv1Session {
+    ): NegotiatedDeviceSession {
         val services = ble.discoverServices()
         val characteristics = services.flatMap { service ->
             service.characteristics.map { characteristic ->
                 BleCharacteristicTarget(service.uuid, characteristic.uuid) to characteristic
             }
         }.toMap()
+        if (services.any { it.uuid == OmiCv1FunctionalGattV1.SERVICE_UUID }) {
+            return openFunctionalNegotiated(candidate, ble, services, characteristics)
+        }
         val required = OmiCv1Targets.requiredForStockLiveCapabilities
         val unsatisfied = required.filter { requirement ->
             val characteristic = characteristics[requirement.target]
@@ -181,6 +187,81 @@ class OmiCv1DriverProvider : DeviceDriverProvider {
             power = power,
         )
     }
+
+    private suspend fun openFunctionalNegotiated(
+        candidate: EndpointCandidate,
+        ble: BleTransportSession,
+        services: List<dev.gumi.edge.sdk.ble.BleGattService>,
+        characteristics: Map<BleCharacteristicTarget, dev.gumi.edge.sdk.ble.BleGattCharacteristic>,
+    ): OmiCv1FunctionalSession {
+        val unsatisfied = OmiCv1FunctionalTargets.required.filter { requirement ->
+            val characteristic = characteristics[requirement.target]
+            characteristic == null || !requirement.isSatisfiedBy(characteristic.properties)
+        }
+        if (unsatisfied.isNotEmpty()) {
+            throw DeviceOpenException(
+                ExpectedFailure(
+                    category = FailureCategory.INCOMPATIBLE,
+                    code = FailureCode("OMI_FUNCTIONAL_REQUIRED_GATT_OPERATIONS_MISSING"),
+                    retryable = false,
+                    redactedEvidence = mapOf("unsatisfiedCount" to unsatisfied.size.toString()),
+                ),
+            )
+        }
+        val familyIdentity = services.singleOrNull {
+            it.uuid == OmiCv1FunctionalGattV1.FAMILY_IDENTITY_SERVICE_UUID
+        }
+        if (familyIdentity == null || familyIdentity.characteristics.isNotEmpty()) {
+            throw functionalProtocolFailure(
+                "OMI_FUNCTIONAL_FAMILY_IDENTITY_INVALID",
+                "Functional firmware requires one empty Omi-family identity service",
+            )
+        }
+
+        val manufacturer = ble.readText(OmiCv1Targets.manufacturer)
+        val model = ble.readText(OmiCv1Targets.model)
+        val firmware = ble.readText(OmiCv1Targets.firmware)
+        val software = ble.readText(OmiCv1FunctionalTargets.software)
+        if (software !in SUPPORTED_FUNCTIONAL_SOFTWARE) {
+            throw functionalProtocolFailure(
+                "OMI_FUNCTIONAL_SOFTWARE_UNSUPPORTED",
+                "Functional Omi software revision is unsupported",
+                mapOf("software" to software),
+            )
+        }
+        val capabilityBytes = ble.read(OmiCv1FunctionalTargets.capabilities).copyBytes()
+        val serviceUuids = services.mapTo(linkedSetOf()) { it.uuid }
+        val decoder: (ByteArray) -> OmiCv1FunctionalStatusEvidence = { status ->
+            try {
+                OmiCv1FunctionalGattV1.validate(
+                    statusBytes = status,
+                    capabilitiesBytes = capabilityBytes,
+                    discoveredServiceUuids = serviceUuids,
+                    familyIdentityServiceHasCharacteristics = false,
+                )
+            } catch (error: OmiCv1FunctionalProtocolException) {
+                throw functionalProtocolFailure(
+                    "OMI_FUNCTIONAL_STATUS_REJECTED",
+                    error.message ?: "Functional Omi status was rejected",
+                )
+            }
+        }
+        decoder(ble.read(OmiCv1FunctionalTargets.status).copyBytes())
+        val capture = OmiFunctionalCaptureStateHandle(ble, decoder)
+        val capabilities = buildFunctionalCapabilitySet(capture)
+        return OmiCv1FunctionalSession(
+            endpoint = candidate,
+            descriptor = DeviceDescriptor(
+                driverId = id,
+                manufacturer = manufacturer,
+                model = model,
+                protocolVersion = "gumi-functional/v1/$software/$firmware",
+                capabilities = capabilities.descriptors,
+            ),
+            capabilities = capabilities,
+            transport = ble,
+        )
+    }
 }
 
 private class OmiCv1Session(
@@ -193,24 +274,7 @@ private class OmiCv1Session(
     private val power: OmiStockPowerStatusHandle,
 ) : NegotiatedDeviceSession {
     override val deviceId = null
-    override val events: Flow<DeviceSessionEvent> = transport.bleEvents.map { event ->
-        when (event) {
-            BleSessionEvent.Closed -> DeviceSessionEvent.Closed
-            BleSessionEvent.Disconnected -> DeviceSessionEvent.Diagnostic(
-                code = "BLE_DISCONNECTED",
-                detail = "The Omi transport disconnected",
-            )
-            is BleSessionEvent.Fault -> DeviceSessionEvent.Diagnostic(event.code.name, event.detail)
-            is BleSessionEvent.LinkChanged -> DeviceSessionEvent.Diagnostic(
-                code = "BLE_LINK_CHANGED",
-                detail = "The Omi BLE link parameters changed",
-            )
-            is BleSessionEvent.NotificationsDropped -> DeviceSessionEvent.Diagnostic(
-                code = "BLE_NOTIFICATIONS_DROPPED",
-                detail = "A bounded Omi notification stream overflowed (${event.count})",
-            )
-        }
-    }
+    override val events: Flow<DeviceSessionEvent> = transport.bleEvents.map(::mapOmiSessionEvent)
 
     private val closeLock = kotlinx.coroutines.sync.Mutex()
     private var closed = false
@@ -238,6 +302,20 @@ private suspend fun BleTransportSession.readText(target: BleCharacteristicTarget
                 retryable = false,
             ),
         )
+
+private fun functionalProtocolFailure(
+    code: String,
+    detail: String,
+    evidence: Map<String, String> = emptyMap(),
+) = DeviceOpenException(
+    ExpectedFailure(
+        category = FailureCategory.INCOMPATIBLE,
+        code = FailureCode(code),
+        retryable = false,
+        redactedEvidence = evidence,
+    ),
+    message = detail,
+)
 
 private fun BleSessionException.asExpectedFailure(): ExpectedFailure = ExpectedFailure(
     category = when (code) {

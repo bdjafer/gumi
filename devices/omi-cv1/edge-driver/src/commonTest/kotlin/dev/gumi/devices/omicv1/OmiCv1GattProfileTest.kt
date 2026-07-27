@@ -35,6 +35,11 @@ class OmiCv1GattProfileTest {
                     0x01, 0x00, 0x00, 0x00,
                 ),
             ),
+            success(
+                OmiCv1GattProfile.RECOVERY_SERVICE,
+                OmiCv1GattProfile.RECOVERY_STATUS,
+                byteArrayOf(0x01, 0x07, 0x01, 0x23),
+            ),
         )
         val evidence = OmiCv1GattProfile.decode(inspection(reads))
 
@@ -46,6 +51,7 @@ class OmiCv1GattProfileTest {
         assertEquals(0x05060708u, storage.freeBytes)
         assertEquals(true, storage.rtcValid)
         assertEquals("44332211040000000807060501000000", evidence.storageRawHex)
+        assertEquals("01070123", evidence.recoveryStatusRawHex)
     }
 
     @Test

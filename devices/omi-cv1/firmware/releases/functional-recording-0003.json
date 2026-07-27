@@ -1,0 +1,134 @@
+{
+  "owner": "devices/omi-cv1",
+  "release_schema": "gumi.omi-cv1.application-release/v1",
+  "release_id": "omi-cv1-v3012-recording-root-provisioner-0001-to-functional-recording-0003",
+  "intent": "application-image-0 watchdog-hardened local encrypted recording firmware",
+  "source": {
+    "upstream_tag": "Omi_CV1_v3.0.12",
+    "upstream_commit": "85159556eac753a088c5efd1b419a5a867508e27",
+    "application_image_index": 0,
+    "application_mcuboot_image_hash": "8a8eef711fd72707905bda05e08ddebc0de2a986d3c1d21b7469c92e7d32b12e",
+    "network_image_index": 1,
+    "network_mcuboot_image_hash": "267b11e2d413acebb874c76204be9f5f3872b9d033bd228ba5bcd46a27903089",
+    "mcuboot_version": "0.0.0+0"
+  },
+  "application_artifact": {
+    "identity": "gumi/Omi_CV1_v3.0.12/functional-recording-0003/omi.signed.bin",
+    "size_bytes": 220444,
+    "file_sha256": "3fda1c98da2bcd747e435b464feda563415949f6e0615193db25f1b658f3af1e",
+    "image_index": 0,
+    "header_size_bytes": 512,
+    "payload_size_bytes": 219596,
+    "protected_tlv_size_bytes": 0,
+    "mcuboot_image_hash": "0cd7ddea779427f25ff2b3341f1242e0e4611f1245b02fde81361c0d2cbcbecd",
+    "mcuboot_version": "0.0.0+0",
+    "compatibility_key_hash": "fc5701dc6135e1323847bdc40f04d2e5bee5833b23c29f93593d00018cfa9994",
+    "signature": "RSA-2048-PSS",
+    "security_counter": null,
+    "deterministic_prefix_bytes": 220188,
+    "signature_verified": true
+  },
+  "observable_identity": {
+    "device_information_firmware_revision": "3.0.12",
+    "device_information_software_revision": "gumi-functional-recording-0003",
+    "functional_service_uuid": "47554d49-0001-4f4d-492d-435631000001",
+    "status_characteristic_uuid": "47554d49-0002-4f4d-492d-435631000001",
+    "capability_characteristic_uuid": "47554d49-0003-4f4d-492d-435631000001",
+    "status_wire_size_bytes": 40,
+    "capability_wire_size_bytes": 16,
+    "protocol_contract": "devices/omi-cv1/protocols/gatt/gumi-functional-v1/profile.json"
+  },
+  "behavior": {
+    "double_tap": "toggle local durable recording",
+    "hold_5_seconds": "admit application-image-0 maintenance while capture is idle",
+    "hold_12_seconds": "cold reset from maintenance or stalled update indication",
+    "single_tap": "bounded status indication",
+    "recording_audio": "16 kHz mono Opus, 320 PCM samples per frame",
+    "recording_storage": "/SD:/GUMI/XXXXXXXX.PRT transactionally finalized to XXXXXXXX.GMR",
+    "recording_protection": "per-record AES-256-GCM with a boot-local key derived from MEXT",
+    "remote_capture_control": false,
+    "live_media_transport": false,
+    "media_export": false
+  },
+  "safety_boundary": {
+    "functional_capture_services_linked": true,
+    "stock_capture_or_storage_services_linked": false,
+    "continuous_red_precedes_and_covers_microphone_activity": true,
+    "microphone_release_is_a_terminal_barrier": true,
+    "codec_close_is_a_terminal_callback_barrier": true,
+    "filesystem_format_path_linked": false,
+    "automatic_huk_provisioning_linked": false,
+    "recording_requires_existing_mext_root": true,
+    "retained_gmr_requires_authenticated_commit_and_exact_end": true,
+    "retained_prt_accepts_only_an_authenticated_prefix": true,
+    "retained_files_mutated_during_boot_recovery": false,
+    "application_image_0_upload_only": true,
+    "network_image_upload_rejected_by_application": true,
+    "runtime_update_confirmation_hold_ms": 5000,
+    "runtime_cold_reset_hold_ms": 12000,
+    "task_watchdog_timeout_ms": 15000,
+    "hardware_watchdog_fallback": true,
+    "update_requires_capture_idle_and_microphone_off": true,
+    "remote_reset_requires_physical_update_admission": true,
+    "watchdog_active_before_device_io_initialization": true,
+    "destructive_settings_storage_erase_handler_linked": false,
+    "ble_management_authenticated": false,
+    "boot_policy": "overwrite-only",
+    "cryptographically_immutable_recovery": false
+  },
+  "build": {
+    "overlay_patch_sha256": "282851f226dd8827a963da20fa56c8a0beab6c182b00c41410db3488bdd8b933",
+    "functional_config_sha256": "8f9f0b2af5172585aed74410fca71bcfaec238212f2f29323161c0ab38e910ed",
+    "functional_source_manifest_sha256": "ed9f9964f3a5e160dd50b07ec35cdf88e8130b061f6a0c9bfaef5a7dfcea30ce",
+    "materialized_cmake_sha256": "6effc1084c1c6afc3a249d96435a6ba551b26d2cf2071c7d601a243ab2558432",
+    "ncs_version": "v2.9.0",
+    "nrf_commit": "7787b264984022cda64d9629278942053e6462a5",
+    "zephyr_commit": "1f8f3dc291420c70cd39e77a5cdc954561d4a08f",
+    "mcuboot_commit": "12e5ee106034972b0f1074d6f2261b2b39d1501b",
+    "zephyr_sdk": "0.17.0",
+    "toolchain_image": "ghcr.io/nrfconnect/sdk-nrf-toolchain:v2.9.0@sha256:7e9b61475ca05b8517079bedc8645479101fdaa17de2d0fa06a1633288112db2",
+    "partition_map_sha256": "b455f45133912e7d5e2d27a0cb40c018620bd101d164b14d8e805e0c1a0f30f9",
+    "partition_map_matches_canonical_stock_build": true
+  },
+  "qualification": {
+    "portable_recording_journal_tests": 16,
+    "portable_recording_store_tests": 11,
+    "portable_capture_supervisor_tests": 21,
+    "exact_board_full_composition_link": "pass",
+    "watchdog_and_runtime_reset_gate": "pass",
+    "imgtool_version": "2.1.0",
+    "signature_result": "Image was correctly validated",
+    "performed_utc_date": "2026-07-24",
+    "device_was_contacted": false,
+    "behavioral_candidate": "offline-qualified; physical qualification pending"
+  },
+  "recovery_return": {
+    "release_id": "omi-cv1-v3012-functional-recording-0003-to-gumi-recovery-only-0001",
+    "required_source_application_mcuboot_image_hash": "0cd7ddea779427f25ff2b3341f1242e0e4611f1245b02fde81361c0d2cbcbecd",
+    "required_source_network_mcuboot_image_hash": "267b11e2d413acebb874c76204be9f5f3872b9d033bd228ba5bcd46a27903089",
+    "recovery_application_size_bytes": 106936,
+    "recovery_application_file_sha256": "d29a5292eeeff01bc0c2984ef0a852706392f2eb1d888ea3c8daa221881e75cc",
+    "recovery_application_mcuboot_image_hash": "065be47c212f3c233bd683c780a5b1dfb583f7dbac932029d15d1fd1cf692d57"
+  },
+  "quarantined_build_outputs": [
+    {
+      "file": "zephyr.bin",
+      "reason": "unsigned application",
+      "size_bytes": 219596,
+      "sha256": "f86c4b5e65dd63fbebf513c5e4f048ddca9c84a31f05c0853f1d43d5ee46aefc"
+    },
+    {
+      "file": "ipc_radio.bin",
+      "reason": "locally generated network image contains a non-published NSIB key",
+      "size_bytes": 174068,
+      "sha256": "f09e4b27f9cbf7edf350196f9c60e9cda786ace34e5b173bc2576dbed8479c7a"
+    },
+    {
+      "file": "dfu_application.zip",
+      "reason": "multi-image package includes the quarantined network image",
+      "size_bytes": 396766,
+      "sha256": "da0ddd651bb21f44e5e6e539f66833cd15295c2e7302d0e13580f0dc1855a1d3"
+    }
+  ],
+  "artifact_conveys_physical_authorization": false
+}

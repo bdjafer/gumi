@@ -1,9 +1,13 @@
 package dev.gumi.edge.shell.application
 
 import dev.gumi.edge.runtime.capture.CaptureState
+import dev.gumi.edge.runtime.capture.CaptureMode
+import dev.gumi.edge.runtime.capture.CaptureProof
+import dev.gumi.edge.runtime.capture.CaptureProofSource
 import dev.gumi.edge.runtime.capture.CaptureTruth
 import dev.gumi.edge.runtime.operational.OperationalBacklog
 import dev.gumi.edge.runtime.operational.OperationalBacklogScope
+import dev.gumi.edge.runtime.operational.OperationalCaptureTruth
 import dev.gumi.edge.runtime.operational.OperationalLinkState
 import dev.gumi.edge.runtime.operational.OperationalPowerRefreshPort
 import dev.gumi.edge.runtime.operational.OperationalPowerRefreshRequest
@@ -18,6 +22,10 @@ import dev.gumi.edge.sdk.DeviceId
 import dev.gumi.edge.sdk.ExpectedFailure
 import dev.gumi.edge.sdk.FailureCategory
 import dev.gumi.edge.sdk.FailureCode
+import dev.gumi.edge.sdk.capability.capture.DeviceCaptureState
+import dev.gumi.edge.sdk.capability.capture.DeviceMicrophoneTruth
+import dev.gumi.edge.sdk.capability.capture.DeviceRecordingTruth
+import dev.gumi.edge.sdk.capability.capture.DeviceVoiceActionTruth
 import dev.gumi.edge.sdk.capability.power.PowerStatus as DevicePowerStatus
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -96,10 +104,22 @@ class OperationalShellBridge(
         val powerAdvanced = prior != null &&
             ownership.generation == prior.ownerGeneration &&
             projection.powerObservationRevision > prior.projection.powerObservationRevision
+        val captureAdvanced = prior != null &&
+            ownership.generation == prior.ownerGeneration &&
+            projection.captureObservationRevision > prior.projection.captureObservationRevision
         val newOwner = prior == null || ownership.generation != prior.ownerGeneration
         val previousReceipts = prior?.receipts ?: AxisReceiptTimes.at(receivedAt)
+        val priorCaptureTruth = prior?.let { it.projection.capture }
         val receipts = AxisReceiptTimes(
-            capture = if (newOwner) receivedAt else previousReceipts.capture,
+            capture = if (
+                newOwner ||
+                captureAdvanced ||
+                projection.capture != priorCaptureTruth
+            ) {
+                receivedAt
+            } else {
+                previousReceipts.capture
+            },
             link = if (newOwner || projection.link != prior.projection.link || powerAdvanced) {
                 receivedAt
             } else {
@@ -395,11 +415,33 @@ class OperationalShellBridge(
                     retryable = false,
                 )
 
+            sameObservationLineage(projection, prior) &&
+                projection.captureObservationRevision <
+                prior.projection.captureObservationRevision -> bridgeFailure(
+                    FailureCategory.REPLAYED,
+                    "OPERATIONAL_SHELL_STALE_CAPTURE_REVISION",
+                    retryable = false,
+                )
+
+            sameObservationLineage(projection, prior) &&
+                projection.captureObservationRevision ==
+                prior.projection.captureObservationRevision &&
+                projection.captureState != prior.projection.captureState -> bridgeFailure(
+                    FailureCategory.CORRUPT,
+                    "OPERATIONAL_SHELL_CAPTURE_REVISION_CONFLICT",
+                    retryable = false,
+                )
+
             else -> null
         }
     }
 
     private fun samePowerLineage(
+        projection: OperationalRuntimeProjection,
+        prior: AcceptedProjection,
+    ): Boolean = sameObservationLineage(projection, prior)
+
+    private fun sameObservationLineage(
         projection: OperationalRuntimeProjection,
         prior: AcceptedProjection,
     ): Boolean = projection.sessionGeneration == null ||
@@ -487,6 +529,13 @@ class OperationalShellBridge(
 
             else -> ObservationFreshness.STALE
         }
+        val captureFreshness = when {
+            capture == OperationalCaptureTruth.DEVICE_REPORTED &&
+                captureState != null &&
+                link == OperationalLinkState.CONNECTED -> ObservationFreshness.FRESH
+            captureState != null -> ObservationFreshness.STALE
+            else -> ObservationFreshness.UNAVAILABLE
+        }
         val storageFreshness = when (storage) {
             OperationalStorageState.READY,
             OperationalStorageState.DEGRADED,
@@ -529,11 +578,21 @@ class OperationalShellBridge(
             deviceId = provisionedDeviceId,
             displayName = displayName,
             capture = AxisObservation(
-                value = CaptureState(truth = CaptureTruth.Unverified()),
-                authority = ProjectionAuthority.EDGE_INFERRED,
+                value = captureState.toRuntimeCaptureState(
+                    verified = capture == OperationalCaptureTruth.DEVICE_REPORTED,
+                    connectionGeneration = connectionGeneration,
+                    causalGeneration = captureObservationRevision,
+                ),
+                authority = if (captureState == null) {
+                    ProjectionAuthority.EDGE_INFERRED
+                } else {
+                    ProjectionAuthority.DEVICE_REPORTED
+                },
                 observedAtEpochMillis = receipts.capture,
-                freshness = ObservationFreshness.UNAVAILABLE,
-                connectionSessionGeneration = null,
+                freshness = captureFreshness,
+                connectionSessionGeneration = connectionGeneration.takeIf {
+                    captureFreshness == ObservationFreshness.FRESH
+                },
             ),
             link = AxisObservation(
                 value = link.toShellLink(),
@@ -615,6 +674,48 @@ class OperationalShellBridge(
         level = PowerLevel.UNKNOWN,
         charging = charging,
     )
+
+    private fun DeviceCaptureState?.toRuntimeCaptureState(
+        verified: Boolean,
+        connectionGeneration: ULong?,
+        causalGeneration: ULong,
+    ): CaptureState {
+        val state = this ?: return CaptureState(truth = CaptureTruth.Unverified())
+        val mode = state.lastReportedMode()
+        if (!verified || connectionGeneration == null || mode == null) {
+            return CaptureState(truth = CaptureTruth.Unverified(lastReportedMode = mode))
+        }
+        val proof = CaptureProof(
+            connectionSessionGeneration = connectionGeneration,
+            causalGeneration = causalGeneration,
+            source = CaptureProofSource.DEVICE_OBSERVATION,
+        )
+        return CaptureState(
+            truth = CaptureTruth.Acquired(mode, proof),
+            resumeAfterVoiceTurn = if (mode == CaptureMode.VOICE_TURN) {
+                if (state.recording == DeviceRecordingTruth.ACTIVE) {
+                    CaptureMode.RECORDING
+                } else {
+                    CaptureMode.IDLE
+                }
+            } else {
+                null
+            },
+        )
+    }
+
+    private fun DeviceCaptureState.lastReportedMode(): CaptureMode? = when {
+        voiceAction == DeviceVoiceActionTruth.ACTIVE &&
+            microphone == DeviceMicrophoneTruth.ACQUIRED -> CaptureMode.VOICE_TURN
+        recording == DeviceRecordingTruth.ACTIVE &&
+            microphone == DeviceMicrophoneTruth.ACQUIRED -> CaptureMode.RECORDING
+        microphone == DeviceMicrophoneTruth.VERIFIED_OFF &&
+            recording == DeviceRecordingTruth.INACTIVE &&
+            voiceAction == DeviceVoiceActionTruth.INACTIVE -> CaptureMode.IDLE
+        voiceAction != DeviceVoiceActionTruth.INACTIVE -> CaptureMode.VOICE_TURN
+        recording != DeviceRecordingTruth.INACTIVE -> CaptureMode.RECORDING
+        else -> null
+    }
 
     private fun OperationalLinkState.toShellLink(): LinkState = when (this) {
         OperationalLinkState.UNKNOWN -> LinkState.DEGRADED

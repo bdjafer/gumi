@@ -1,0 +1,46 @@
+diff --git a/omi/firmware/omi/CMakeLists.txt b/omi/firmware/omi/CMakeLists.txt
+--- a/omi/firmware/omi/CMakeLists.txt
++++ b/omi/firmware/omi/CMakeLists.txt
+@@ -4,32 +4,13 @@ enable_language(C ASM) # OPUS
+ 
+ project(omi)
+ 
+-file(GLOB app_sources
+-    src/main.c
+-    src/mic.c
+-    src/battery.c
+-    src/led.c
+-    src/haptic.c
+-    src/sd_card.c
+-    src/spi_flash.c
+-    src/settings.c
+-    src/feedback.c
+-)
+-file(GLOB core_sources
+-    src/lib/core/config.h
+-    src/lib/core/codec.c
+-    src/lib/core/transport.c
+-    src/lib/core/button.c
+-    src/lib/core/monitor.c
+-)
+-
+-if(CONFIG_OMI_ENABLE_OFFLINE_STORAGE)
+-    list(APPEND core_sources src/lib/core/storage.c)
+-endif()
+-
+-target_sources(app PRIVATE ${core_sources} ${app_sources})
+-
+-if(CONFIG_OMI_CODEC_OPUS)
+-    add_subdirectory(src/lib/core/lib/opus-1.2.1/)
+-    target_link_libraries(app PRIVATE opus_codec)
+-endif()
++# Recovery-only application stage: no stock functional source is linked here.
++target_sources(app PRIVATE
++    src/gumi/recovery.c
++    src/gumi/zephyr/omi-v3012/mic_port.c
++    src/gumi/zephyr/omi-v3012/recovery_port.c
++    src/gumi/zephyr/omi-v3012/recovery_only_main.c
++)
++target_include_directories(app PRIVATE
++    src/gumi/include
++)

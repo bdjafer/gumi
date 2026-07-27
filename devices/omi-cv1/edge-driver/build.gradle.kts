@@ -26,6 +26,7 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
         }
         jvmTest {
             resources.srcDir(project.file("../protocols/ring/v1"))

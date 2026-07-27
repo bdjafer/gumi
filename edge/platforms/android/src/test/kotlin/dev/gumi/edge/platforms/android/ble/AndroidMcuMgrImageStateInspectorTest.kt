@@ -17,6 +17,17 @@ import kotlinx.coroutines.runBlocking
 
 class AndroidMcuMgrImageStateInspectorTest {
     @Test
+    fun `image-state read requests the qualified transport MTU without claiming persistent mutation`() {
+        val disclosure = AndroidMcuMgrImageStateInspector.READ_DISCLOSURE
+
+        assertEquals(498, AndroidMcuMgrImageStateInspector.IMAGE_STATE_ATT_MTU)
+        assertEquals(498, disclosure.requestedAttMtu)
+        assertTrue(disclosure.writesRequestCharacteristic)
+        assertTrue(disclosure.writesNotificationDescriptor)
+        assertFalse(disclosure.persistentDeviceMutationExpected)
+    }
+
+    @Test
     fun `maps an offline Nordic response without losing image identity or state`() {
         val response = McuMgrImageStateResponse().apply {
             splitStatus = McuMgrImageStateResponse.SPLIT_STATUS_MATCHING

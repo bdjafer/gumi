@@ -25,6 +25,10 @@ privacy contract.
 
 - [`contract.json`](contract.json) is the machine-readable semantic mapping, timing profile, named
   physical patterns, arbitration order, lifecycle rules, and qualification gates.
+- [`policy-profiles.json`](policy-profiles.json) separates semantic gesture policy from gesture
+  recognition and capture authority. It records both the manual Recording/VoiceTurn profile and an
+  unshipped continuous-Recording/interpretation-marker profile without claiming either can be changed
+  on a frozen artifact at runtime.
 - [`fixtures.json`](fixtures.json) supplies deterministic boundary, transition, fault, lifecycle, and
   output cases for firmware, simulator, driver, runtime, and shell conformance.
 - [`protocol-integrity.test.mjs`](protocol-integrity.test.mjs) checks the two JSON artifacts locally for
@@ -36,6 +40,13 @@ privacy contract.
 The JSON documents are data contracts, not configuration that may be changed silently. A timing,
 gesture, signal, priority, or semantic change creates a reviewed protocol revision and corresponding
 fixture update.
+
+`functional-recording-0003` embeds behavior equivalent to the manual profile in its frozen target
+source. V0004 and v0005 inherit that behavior unchanged while repairing only the bounded crypto
+allocator and exact SPI-SD PM integration, respectively. The portable policy module is a vNext seam
+and is deliberately not linked into these signed candidates. The continuous profile and semantic
+marker tracker are host-tested design evidence only; shipping either requires a new reviewed firmware
+artifact and physical qualification.
 
 ## Ownership
 

@@ -1,0 +1,9 @@
+tests:
+  gumi.omi_cv1.recording_storage_port.link:
+    tags:
+      - gumi
+      - omi_cv1
+      - storage
+    platform_allow:
+      - omi/nrf5340/cpuapp
+    build_only: true

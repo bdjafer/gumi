@@ -1,0 +1,55 @@
+diff --git a/omi/firmware/omi/CMakeLists.txt b/omi/firmware/omi/CMakeLists.txt
+index 8fa1c24..a4f00d8 100644
+--- a/omi/firmware/omi/CMakeLists.txt
++++ b/omi/firmware/omi/CMakeLists.txt
+@@ -4,30 +4,27 @@ enable_language(C ASM) # OPUS
+ 
+ project(omi)
+ 
+-file(GLOB app_sources
+-    src/main.c
+-    src/mic.c
+-    src/battery.c
+-    src/led.c
+-    src/haptic.c
+-    src/sd_card.c
+-    src/spi_flash.c
+-    src/settings.c
+-    src/feedback.c
+-)
+-file(GLOB core_sources
+-    src/lib/core/config.h
+-    src/lib/core/codec.c
+-    src/lib/core/transport.c
+-    src/lib/core/button.c
+-    src/lib/core/monitor.c
++# Gumi functional stage: the stock application graph is not linked.
++target_sources(app PRIVATE
++    src/gumi/button.c
++    src/gumi/capture.c
++    src/gumi/feedback.c
++    src/gumi/recording_journal.c
++    src/gumi/recording_store.c
++    src/gumi/zephyr/omi-v3012/codec_port.c
++    src/gumi/zephyr/omi-v3012/crypto_port.c
++    src/gumi/zephyr/omi-v3012/functional_io.c
++    src/gumi/zephyr/omi-v3012/functional_main.c
++    src/gumi/zephyr/omi-v3012/functional_transport.c
++    src/gumi/zephyr/omi-v3012/mic_port.c
++    src/gumi/zephyr/omi-v3012/recording_key_port.c
++    src/gumi/zephyr/omi-v3012/recording_storage_pm_policy.c
++    src/gumi/zephyr/omi-v3012/recording_storage_port.c
+ )
+-
+-if(CONFIG_OMI_ENABLE_OFFLINE_STORAGE)
+-    list(APPEND core_sources src/lib/core/storage.c)
+-endif()
+-
+-target_sources(app PRIVATE ${core_sources} ${app_sources})
++target_include_directories(app PRIVATE
++    src/gumi/include
++    src/lib/core/lib/opus-1.2.1
++)
+ 
+ if(CONFIG_OMI_CODEC_OPUS)
+     add_subdirectory(src/lib/core/lib/opus-1.2.1/)

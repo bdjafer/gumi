@@ -39,6 +39,15 @@ of all 13 indicator patterns and all 10 switched-motor patterns are checked exac
 contract. This is protocol-design evidence only: stock/custom firmware behavior, physical timing,
 indication visibility, and haptic distinguishability remain unproved.
 
+The firmware kernel now separates semantic gesture recognition from product interaction policy. A
+host-tested manual profile expresses the current Recording/VoiceAction behavior, while a second
+unshipped profile proves that continuous Recording plus recording-correlated interpretation markers
+does not require rewriting GPIO, capture, privacy, or storage code. The current
+`functional-recording-0005` repair retains v0003's embedded manual behavior, v0004's bounded Nordic
+Mbed TLS allocator, and adds only the exact SPI-SD no-PM-callback normalization required before mount;
+the new interaction-policy and marker modules remain a vNext seam, not a claim about the signed v0005
+bytes.
+
 The foreground Android diagnostics share one process-scoped BLE-operation lease across connected GATT,
 driver, firmware-image, and bounded live-audio actions. Discovery is gate-guarded rather than leased;
 connection actions stop scanning before acquiring the lease. The lease remains held through cancellation
@@ -56,10 +65,14 @@ actions, and coalesced stops keep the service until cleanup and exact foreground
 
 The next portable operational layer also executes offline: one `OperationalDeviceRuntime` proves
 binding -> reconciled storage -> transport lease -> ephemeral endpoint -> negotiated Omi -> power
-acquisition and exact reverse cleanup while capture remains unverified. The Android storage adapter
+acquisition and exact reverse cleanup. When the exact custom functional service is present, the Omi
+driver exposes read-only device-neutral capture state; the runtime versions initial and notified
+observations, and disconnect removes freshness while retaining the last state conservatively. The
+Android storage adapter
 opens and reconciles the encrypted spool behind that port, and `OperationalShellBridge` projects
 generation-fenced link, power, storage, backlog, and per-axis freshness into the reusable shell while
-rejecting capture commands. These are local candidates, not an Android product graph.
+still rejecting capture commands because functional v1 deliberately exposes no remote control. These
+are local candidates, not an Android product graph.
 
 For the first operational M1 witness, the supported cardinality is exactly one explicitly started
 device using one process-global spool; its recovered backlog is edge-host-global, not device-scoped.
@@ -69,12 +82,15 @@ still deliberately reports association and recovery unavailable and has no durab
 resolver, durable user-stop restoration, shell freshness scheduler, real Omi composition, cloud sync,
 Companion adapter, automatic restart source, handset service test, process-death/reboot, or OEM run.
 
-The stock Omi driver currently resolves no provisioned Gumi `deviceId` and exposes no
-`CaptureControl` or capture-state observation. There is also no operational live-media owner binding
-BLE notifications to mux/checkpoint/spool recovery. Product recording and upload therefore remain
-disabled even when the local service scaffold is visible; the next operational slice, once its
-composition lands, is one explicit foreground connection with capture left unverified and zero audio
-subscription.
+The stock Omi driver still resolves no provisioned Gumi `deviceId` and exposes no
+`CaptureControl` or capture-state observation. The exact functional-v1 path exposes read-only capture
+truth but likewise has no stable provisioned identity, remote control, live media, or export. There is
+also no operational live-media owner binding BLE notifications to mux/checkpoint/spool recovery.
+Product recording and upload therefore remain disabled even when the local service scaffold is
+visible. Portable firmware-maintenance and product-action adapters now define the reusable application
+seams for exact-artifact authorization, qualified VoiceTurn/update/confirmation inputs, idempotent
+command envelopes, and Android/Linux/Raspberry Pi UI composition without importing Flash Lab or BLE
+types.
 
 The first Astrale fleet/capture domain slice builds with caller-authority, close-before-finalize, and
 concurrent one-shot terminal simulations. It consumes generated types from the publisher-owned

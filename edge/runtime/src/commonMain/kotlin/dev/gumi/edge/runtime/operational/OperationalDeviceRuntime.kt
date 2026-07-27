@@ -19,6 +19,9 @@ import dev.gumi.edge.sdk.NegotiatedDeviceSession
 import dev.gumi.edge.sdk.TransportSession
 import dev.gumi.edge.sdk.ble.BleConnectionOptions
 import dev.gumi.edge.sdk.ble.BleSessionException
+import dev.gumi.edge.sdk.capability.capture.CaptureStateHandle
+import dev.gumi.edge.sdk.capability.capture.CaptureStateV1
+import dev.gumi.edge.sdk.capability.capture.DeviceCaptureState
 import dev.gumi.edge.sdk.capability.power.PowerStatus
 import dev.gumi.edge.sdk.capability.power.PowerStatusHandle
 import dev.gumi.edge.sdk.capability.power.PowerStatusV1
@@ -45,8 +48,9 @@ import kotlinx.coroutines.withContext
  * Portable operational composition for one provisioned device.
  *
  * Acquisition is deliberately strict: durable binding, reconciled storage, transport ownership,
- * ephemeral endpoint resolution, BLE connection, driver negotiation, initial power read, then
- * lifetime collectors. No capture state, media read, ring-buffer operation, or device write occurs.
+ * ephemeral endpoint resolution, BLE connection, driver negotiation, initial observational capability
+ * reads, then lifetime collectors. No capture command, media read, ring-buffer operation, or device
+ * write occurs.
  */
 class OperationalDeviceRuntime(
     parentScope: CoroutineScope,
@@ -139,6 +143,9 @@ class OperationalDeviceRuntime(
                     sessionGeneration = runtimeOperation.sessionGeneration,
                     deviceId = null,
                     link = OperationalLinkState.UNKNOWN,
+                    capture = OperationalCaptureTruth.UNVERIFIED,
+                    captureState = null,
+                    captureObservationRevision = 0uL,
                     power = null,
                     powerObservationRevision = 0uL,
                     storage = OperationalStorageState.CLOSED,
@@ -275,12 +282,22 @@ class OperationalDeviceRuntime(
             }
 
             val powerHandle = session.capabilities.handle(PowerStatusV1)
+            val captureHandle = session.capabilities.handle(CaptureStateV1)
             owned.powerHandle = powerHandle
+            owned.captureHandle = captureHandle
             val initialPower = powerHandle?.read()
+            val initialCapture = captureHandle?.read()
             stateMutex.withLock {
                 updateProjectionLocked {
                     it.copy(
                         link = OperationalLinkState.CONNECTED,
+                        capture = if (initialCapture == null) {
+                            OperationalCaptureTruth.UNVERIFIED
+                        } else {
+                            OperationalCaptureTruth.DEVICE_REPORTED
+                        },
+                        captureState = initialCapture,
+                        captureObservationRevision = if (initialCapture == null) 0uL else 1uL,
                         power = initialPower,
                         powerObservationRevision = if (initialPower == null) 0uL else 1uL,
                     )
@@ -288,6 +305,9 @@ class OperationalDeviceRuntime(
             }
             owned.collectors += startSessionCollector(owned, session)
             if (powerHandle != null) owned.collectors += startPowerCollector(owned, powerHandle)
+            if (captureHandle != null) {
+                owned.collectors += startCaptureCollector(owned, captureHandle)
+            }
 
             val startupFault = stateMutex.withLock {
                 if (active !== owned) {
@@ -631,6 +651,7 @@ class OperationalDeviceRuntime(
                         } else {
                             OperationalLinkState.DISCONNECTED
                         },
+                        capture = OperationalCaptureTruth.UNVERIFIED,
                         storage = if (failures.any { failure -> failure.storageClose }) {
                             OperationalStorageState.DEGRADED
                         } else {
@@ -712,6 +733,19 @@ class OperationalDeviceRuntime(
         }
     }
 
+    private fun startCaptureCollector(
+        owned: OwnedResources,
+        capture: CaptureStateHandle,
+    ): Job = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+        try {
+            capture.updates.collect { observation -> publishCapture(owned, observation) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Throwable) {
+            publishCaptureFault(owned)
+        }
+    }
+
     private suspend fun publishPower(owned: OwnedResources, power: PowerStatus) {
         stateMutex.withLock {
             if (active !== owned) {
@@ -731,6 +765,54 @@ class OperationalDeviceRuntime(
         }
     }
 
+    private suspend fun publishCapture(
+        owned: OwnedResources,
+        capture: DeviceCaptureState,
+    ) {
+        stateMutex.withLock {
+            if (active !== owned) {
+                markStaleLocked()
+                return
+            }
+            if (mutableProjection.value.captureObservationRevision == ULong.MAX_VALUE) {
+                markStaleLocked()
+                return
+            }
+            updateProjectionLocked {
+                it.copy(
+                    capture = OperationalCaptureTruth.DEVICE_REPORTED,
+                    captureState = capture,
+                    captureObservationRevision = it.captureObservationRevision + 1uL,
+                )
+            }
+        }
+    }
+
+    private suspend fun publishCaptureFault(owned: OwnedResources) {
+        val failure = failure(
+            owned.ownerOperation,
+            FailureCategory.CORRUPT,
+            "OPERATIONAL_CAPTURE_UPDATES_FAILED",
+            true,
+        )
+        val accepted = stateMutex.withLock {
+            if (active !== owned) {
+                markStaleLocked()
+                false
+            } else {
+                updateProjectionLocked {
+                    it.copy(
+                        lifecycle = OperationalRuntimeLifecycle.DEGRADED,
+                        capture = OperationalCaptureTruth.UNVERIFIED,
+                        lastFailure = failure,
+                    )
+                }
+                true
+            }
+        }
+        if (accepted) eventChannel.send(RuntimeHostRecoveryEvent.Faulted(owned.ownerOperation, failure))
+    }
+
     private suspend fun publishDisconnected(owned: OwnedResources) {
         val failure = failure(
             owned.ownerOperation,
@@ -747,6 +829,7 @@ class OperationalDeviceRuntime(
                     it.copy(
                         lifecycle = OperationalRuntimeLifecycle.DEGRADED,
                         link = OperationalLinkState.DISCONNECTED,
+                        capture = OperationalCaptureTruth.UNVERIFIED,
                         lastFailure = failure,
                     )
                 }
@@ -888,6 +971,7 @@ private data class OwnedResources(
     var transportSession: TransportSession? = null,
     var deviceSession: DeviceSession? = null,
     var powerHandle: PowerStatusHandle? = null,
+    var captureHandle: CaptureStateHandle? = null,
     val collectors: MutableList<Job> = mutableListOf(),
     val staleCleanupRejected: Boolean = false,
 )

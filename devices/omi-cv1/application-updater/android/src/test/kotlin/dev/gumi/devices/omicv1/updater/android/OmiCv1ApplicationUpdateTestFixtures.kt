@@ -12,14 +12,16 @@ internal fun release(
     manifest: OmiCv1ApplicationArtifactManifest,
     sourceApplicationHash: FirmwareImageHash = FirmwareImageHash("11".repeat(32)),
     sourceNetworkHash: FirmwareImageHash = FirmwareImageHash("22".repeat(32)),
+    sourceManufacturer: String = OmiCv1V3012ApplicationUpdateCatalog.STOCK_MANUFACTURER,
 ) = OmiCv1ApplicationUpdateRelease(
     releaseId = "test-release",
-    intent = OmiCv1ApplicationUpdateIntent.MINIMAL_CANARY,
+    intent = OmiCv1ApplicationUpdateIntent.RECOVERY_ONLY,
     source = OmiCv1ExpectedActiveImages(
         applicationHash = sourceApplicationHash,
         networkHash = sourceNetworkHash,
         mcubootVersion = "0.0.0+0",
     ),
+    sourceManufacturer = sourceManufacturer,
     target = manifest,
 )
 

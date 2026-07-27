@@ -1,6 +1,6 @@
 {
   "owner": "devices/omi-cv1",
-  "release_schema": "gumi.omi-cv1.application-canary/v1",
+  "release_schema": "gumi.omi-cv1.application-release/v1",
   "release_id": "omi-cv1-v3012-stock-to-gumi-canary-0001",
   "intent": "application-image-0 identity-only canary",
   "source": {

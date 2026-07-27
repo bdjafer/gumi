@@ -44,6 +44,11 @@ remains `0.0.0+0`, and its signature verifies with the pinned compatibility key.
 is [canary-0001.json](../../firmware/releases/canary-0001.json). The build and qualification contacted
 no physical device and grant no permission to upload it.
 
+That canary has since completed one stock -> canary -> stock compatibility cycle. The current next image
+is recovery-only-0001: exact-source built, signed, independently qualified offline, and packaged with
+exact stock in a release-specific Flash Lab. Its physical risk decision remains proposed and no upload
+is authorized yet. See [recovery-first-firmware.md](recovery-first-firmware.md).
+
 Sources:
 
 - [official flash documentation](https://github.com/BasedHardware/omi/blob/1c19526cacb8a6100e8060b203c02963882281cf/docs/doc/get_started/Flash_device.mdx)
@@ -168,9 +173,9 @@ Before any physical mutation:
    process-local endpoint binding, and recovery artifact location; and
 6. stop for an explicit owner go/no-go that names the exact canary file SHA-256.
 
-The dedicated flash-lab APK is now composed outside the product shell. Its scoped check verifies the
-two exact application assets, transaction state machine, source-drift/cancellation/reboot negatives,
-lint, permissions, and packaged absence of network/ZIP/HEX artifacts. The owned unit uses
+The original dedicated flash-lab APK was composed outside the product shell with two exact application
+assets. Its scoped check verified the transaction state machine, source-drift/cancellation/reboot
+negatives, lint, permissions, and packaged absence of network/ZIP/HEX artifacts. The first owned unit uses
 confirm-only/overwrite-style upgrade policy, so the canary does not depend on automatic test-and-revert.
 Composition and a passing build still do not authorize a physical write; the final owner action remains
 separate and names the exact canary file SHA-256.
@@ -197,8 +202,10 @@ other state differs, stop; never substitute a multi-image package.
 
 Nordic Android Device Manager `2.8.0` exposes separate APIs for a single image and an explicit
 multi-image `ImageSet`, so this boundary can reuse the maintained transport/state machine rather than
-forking MCU Manager. Gumi's isolated adapter calls only the explicit single-image-`0` path; repository
-checks forbid `ImageSet` and audit the final APK's two exact application assets. A reset-time disconnect
+forking MCU Manager. The original canary route calls only the explicit single-image-`0` path. As of
+2026-07-25, repository checks allow `ImageSet` in exactly one separately reviewed adapter: the official
+v3.0.7 → v3.0.12 stock normalizer, which pins both Based Hardware release images and cannot load
+arbitrary files. Every Gumi application transition remains image-`0`-only. A reset-time disconnect
 is recorded as response-unobserved and can advance
 only to `AWAITING_POST_REBOOT_VALIDATION`; it is never treated as proof that the target booted.
 
@@ -220,17 +227,54 @@ state. After reboot, require the published application hash, apply the same expl
 policy, and re-run the behavior checks. The different source and target hashes make this recovery observable even though both MCUboot
 versions are `0.0.0+0`.
 
-After proving recovery, a later separately approved canary reinstall can run the same checks. Do not
-proceed to capture semantics if the application-only round trip
-`stock v3.0.12 -> canary v3.0.12 -> stock v3.0.12 -> canary v3.0.12` is not repeatable.
+### Owned-unit compatibility-cycle result, 2026-07-20
 
-Exit gate: we can reproduce, upload application image `0`, boot, reconnect, show no contradictory
-image-`1` evidence while preserving a construction that cannot request it, and perform an equal-version
-forward recovery without direct hardware access.
+One separately authorized cycle completed without direct hardware access:
+
+- exact stock application hash `0eed1a42063975be5f8aee0e0df710122de445f7473681ba780bdcdad2fe7b36`
+  transitioned to exact canary hash
+  `d3b3c74c10c4fa110763ae5523d0aeaa20b9f815b8674167486be6ff6f8052ce`;
+- the canary rebooted active/bootable/confirmed/not-pending, exposed `gumi-canary-0001`, produced the
+  three rapid magenta indicator pulses, and retained GATT and bounded live-audio compatibility;
+- a distinct exact-artifact authorization transitioned the canary back to official stock file
+  SHA-256 `877990aabf267fb3f281803cfa3c2aec8f29a86bfa8fb4c05c79a024b07db9db`;
+- fresh post-reboot Flash Lab and independent Gumi reads both returned the exact stock application
+  hash active/bootable/confirmed/not-pending; and
+- recovered stock again negotiated `omi-stock/3.0.12`, exposed 11 services/21 characteristics, and
+  qualified 536 continuous Opus frames over 9,994 ms before closing the transport.
+
+Image `1` and both secondary-slot inventories remained unobserved. The application-only construction
+contained no network bytes or update API, but this is not a measured network-core hash. The result
+therefore proves one application forward/recovery cycle, not generic OTA, interruption recovery, or
+repeatability.
+
+This completed compatibility cycle is the transport/recovery witness. Repeating the identity canary is
+not a prerequisite for the recovery-first image; the current Flash Lab no longer packages it.
+
+Exit gate: passed once. We can reproduce, upload application image `0`, boot, reconnect, show no
+contradictory image-`1` evidence while preserving a construction that cannot request it, and perform an
+equal-version forward recovery without direct hardware access.
+
+## Stage 3.5: recovery-first application
+
+Before capture semantics, install the smallest image that keeps BLE/SMP recovery reachable while proving
+the microphone off and all functional services absent. The exact offline-qualified release, security
+boundary, status wire, Android validation, and pending physical gate are recorded in
+[recovery-first-firmware.md](recovery-first-firmware.md).
+
+Recovery-only must settle to status `01070123`, expose no stock audio characteristic, reject image-`1`
+uploads in firmware, and retain exact-stock recovery as a separately authorized application-image-`0`
+transition. It is not immutable: stock upgrade policy is overwrite-only, the upstream compatibility
+private key is public, and the development BLE maintenance path is unpaired.
+
+Exit gate: the owned unit boots exact recovery-only-0001, fresh diagnostics prove its image state plus
+fail-closed GATT evidence, it remains reachable off charger for the bounded observation, and exact-stock
+recovery is still reviewable without having been run automatically. The Flash Lab's evidence-bound
+post-reboot endpoint rebind must be exercised during a future authorized transition.
 
 ## Stage 4: first functional firmware
 
-After the canary gate:
+After the recovery-first gate:
 
 - add explicit capture state with microphone-off Idle;
 - replace stock Normal-mode shutdown gestures and prove a qualified button press wakes from Off without

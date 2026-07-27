@@ -16,6 +16,8 @@ object OmiCv1GattProfile {
     const val BATTERY_LEVEL = "00002a19-0000-1000-8000-00805f9b34fb"
     const val STORAGE_SERVICE = OmiCv1Protocol.OFFLINE_STORAGE_SERVICE_UUID
     const val STORAGE_STATUS = "30295782-4301-eabd-2904-2849adfeae43"
+    const val RECOVERY_SERVICE = "796e0485-8f9d-4063-af3b-f5596fced74a"
+    const val RECOVERY_STATUS = "32fcb4a7-660b-4c26-a887-3baf0166246c"
 
     val readOnlyInspectionRequest = BleGattInspectionRequest(
         reads = setOf(
@@ -26,12 +28,14 @@ object OmiCv1GattProfile {
             target(DEVICE_INFORMATION_SERVICE, SOFTWARE_REVISION),
             target(BATTERY_SERVICE, BATTERY_LEVEL),
             target(STORAGE_SERVICE, STORAGE_STATUS),
+            target(RECOVERY_SERVICE, RECOVERY_STATUS),
         ),
     )
 
     fun decode(inspection: BleGattInspection): OmiCv1GattEvidence {
         val reads = inspection.reads.associateBy(BleGattReadResult::target)
         val storageBytes = reads.bytes(STORAGE_SERVICE, STORAGE_STATUS)
+        val recoveryStatusBytes = reads.bytes(RECOVERY_SERVICE, RECOVERY_STATUS)
         return OmiCv1GattEvidence(
             manufacturer = reads.text(DEVICE_INFORMATION_SERVICE, MANUFACTURER_NAME),
             modelNumber = reads.text(DEVICE_INFORMATION_SERVICE, MODEL_NUMBER),
@@ -44,6 +48,7 @@ object OmiCv1GattProfile {
                 ?.toInt(),
             storage = storageBytes?.decodeStorageEvidence(),
             storageRawHex = storageBytes?.toHex(),
+            recoveryStatusRawHex = recoveryStatusBytes?.toHex(),
             successfulReadLengths = inspection.reads
                 .filterIsInstance<BleGattReadResult.Success>()
                 .associate { it.target to it.value.size },
@@ -64,6 +69,7 @@ data class OmiCv1GattEvidence(
     val batteryPercent: Int?,
     val storage: OmiCv1StorageEvidence?,
     val storageRawHex: String?,
+    val recoveryStatusRawHex: String?,
     val successfulReadLengths: Map<BleGattReadTarget, Int>,
     val readFailures: List<BleGattReadResult.Failure>,
 )

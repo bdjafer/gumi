@@ -70,21 +70,46 @@ expect_failure 'type-safe project accessors are not accepted by this boundary ve
 : > "$test_root/edge/runtime/build.gradle.kts"
 printf 'dependencies { implementation(project(":edge:platforms:android")) }\n' \
     > "$test_root/devices/omi-cv1/application-updater/android/build.gradle.kts"
-expect_failure 'forbidden project dependency :edge:platforms:android'
+verify_fixture
+
+printf 'dependencies { implementation(project(":edge:runtime")) }\n' \
+    > "$test_root/devices/omi-cv1/application-updater/android/build.gradle.kts"
+expect_failure 'forbidden project dependency :edge:runtime'
 
 : > "$test_root/devices/omi-cv1/application-updater/android/build.gradle.kts"
 updater_probe="$test_root/devices/omi-cv1/application-updater/android/src/main/DangerousUpdater.kt"
 mkdir -p "$(dirname -- "$updater_probe")"
 printf 'class DangerousUpdater { val manager: FirmwareUpgradeManager? = null }\n' > "$updater_probe"
-expect_failure 'update mutation is allowed only in the reviewed image-0 adapter/executor'
+expect_failure 'update mutation is allowed only in the reviewed firmware adapters/executor'
 rm -f -- "$updater_probe"
+
+allowed_normalizer_probe="$test_root/devices/omi-cv1/application-updater/android/src/main/kotlin/dev/gumi/devices/omicv1/updater/android/AndroidOmiCv1StockNormalizationSession.kt"
+mkdir -p "$(dirname -- "$allowed_normalizer_probe")"
+printf 'class AndroidOmiCv1StockNormalizationSession { val images: ImageSet? = null }\n' \
+    > "$allowed_normalizer_probe"
+verify_fixture
+rm -f -- "$allowed_normalizer_probe"
 
 allowed_updater_probe="$test_root/devices/omi-cv1/application-updater/android/src/main/kotlin/dev/gumi/devices/omicv1/updater/android/AndroidOmiCv1ApplicationImage0Session.kt"
 mkdir -p "$(dirname -- "$allowed_updater_probe")"
 printf 'class AndroidOmiCv1ApplicationImage0Session { val manager: FsManager? = null }\n' \
     > "$allowed_updater_probe"
-expect_failure 'broader MCU Manager surfaces are forbidden in the image-0 updater'
+expect_failure 'broader MCU Manager surfaces are forbidden in the closed updater'
 rm -f -- "$allowed_updater_probe"
+
+printf 'class AndroidOmiCv1ApplicationImage0Session { fun erase() = other.erase() }\n' \
+    > "$allowed_updater_probe"
+expect_failure 'only one explicit imageManager.erase(slot) call is allowed'
+rm -f -- "$allowed_updater_probe"
+
+printf 'class AndroidOmiCv1ApplicationImage0Session { fun erase() = imageManager.erase(1) }\n' \
+    > "$allowed_updater_probe"
+verify_fixture
+rm -f -- "$allowed_updater_probe"
+
+printf 'class DangerousUpdater { fun erase() = imageManager.erase(1) }\n' > "$updater_probe"
+expect_failure 'erase is allowed only in the reviewed application image-0 adapter'
+rm -f -- "$updater_probe"
 
 mkdir -p "$test_root/edge/unreviewed/src"
 : > "$test_root/edge/unreviewed/build.gradle.kts"

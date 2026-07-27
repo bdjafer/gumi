@@ -483,11 +483,32 @@ static gumi_capture_status start_stop(
                 GUMI_CAPTURE_ACTION_CLOSE_REALTIME_ROUTE
             );
             if (status != GUMI_CAPTURE_STATUS_OK) return status;
-            return emit_action(
+            status = emit_action(
                 result,
                 at_ms,
                 state->transition_id,
                 GUMI_CAPTURE_ACTION_RELEASE_MICROPHONE
+            );
+            if (status != GUMI_CAPTURE_STATUS_OK) return status;
+            if (!state->local_recording_open) {
+                return GUMI_CAPTURE_STATUS_OK;
+            }
+            if (stop_kind == STOP_VOICE_IDLE_ACTIVE &&
+                reason == GUMI_CAPTURE_REASON_NONE) {
+                state->stop_wait_finalize = true;
+                return emit_action(
+                    result,
+                    at_ms,
+                    state->transition_id,
+                    GUMI_CAPTURE_ACTION_FINALIZE_LOCAL_RECORDING
+                );
+            }
+            state->stop_wait_durable_boundary = true;
+            return emit_action(
+                result,
+                at_ms,
+                state->transition_id,
+                GUMI_CAPTURE_ACTION_COMMIT_LAST_DURABLE_FRAME
             );
         case STOP_VOICE_OVERLAY_ACTIVE:
         case STOP_VOICE_OVERLAY_CANCELLED:
@@ -502,11 +523,22 @@ static gumi_capture_status start_stop(
         case STOP_BASE_START_CANCELLED:
             state->mic_truth = GUMI_CAPTURE_MIC_RELEASING;
             state->stop_wait_microphone_release = true;
-            return emit_action(
+            status = emit_action(
                 result,
                 at_ms,
                 state->transition_id,
                 GUMI_CAPTURE_ACTION_RELEASE_MICROPHONE
+            );
+            if (status != GUMI_CAPTURE_STATUS_OK ||
+                !state->local_recording_open) {
+                return status;
+            }
+            state->stop_wait_durable_boundary = true;
+            return emit_action(
+                result,
+                at_ms,
+                state->transition_id,
+                GUMI_CAPTURE_ACTION_COMMIT_LAST_DURABLE_FRAME
             );
         case STOP_SAFETY_PRIVACY:
             state->base_audio_permitted = false;
@@ -526,11 +558,22 @@ static gumi_capture_status start_stop(
                 );
                 if (status != GUMI_CAPTURE_STATUS_OK) return status;
             }
-            return emit_action(
+            status = emit_action(
                 result,
                 at_ms,
                 state->transition_id,
                 GUMI_CAPTURE_ACTION_RELEASE_MICROPHONE
+            );
+            if (status != GUMI_CAPTURE_STATUS_OK ||
+                !state->local_recording_open) {
+                return status;
+            }
+            state->stop_wait_durable_boundary = true;
+            return emit_action(
+                result,
+                at_ms,
+                state->transition_id,
+                GUMI_CAPTURE_ACTION_COMMIT_LAST_DURABLE_FRAME
             );
         default:
             return GUMI_CAPTURE_STATUS_INVALID_CONFIGURATION;
@@ -833,6 +876,26 @@ static bool stop_is_complete(const gumi_capture_supervisor *state)
            !state->stop_wait_realtime_close && !state->stop_wait_microphone_release;
 }
 
+static gumi_capture_status ensure_microphone_release_requested(
+    gumi_capture_supervisor *state,
+    uint64_t at_ms,
+    gumi_capture_result *result
+)
+{
+    if (state->mic_truth == GUMI_CAPTURE_MIC_VERIFIED_OFF ||
+        state->stop_wait_microphone_release) {
+        return GUMI_CAPTURE_STATUS_OK;
+    }
+    state->stop_wait_microphone_release = true;
+    state->mic_truth = GUMI_CAPTURE_MIC_RELEASING;
+    return emit_action(
+        result,
+        at_ms,
+        state->transition_id,
+        GUMI_CAPTURE_ACTION_RELEASE_MICROPHONE
+    );
+}
+
 static gumi_capture_status finish_stop(
     gumi_capture_supervisor *state,
     uint64_t at_ms,
@@ -854,9 +917,12 @@ static gumi_capture_status finish_stop(
             state->stop_reason
         );
         if (status != GUMI_CAPTURE_STATUS_OK) return status;
-        if (kind == STOP_BASE_USER) {
+        if (kind == STOP_BASE_USER &&
+            state->stop_reason == GUMI_CAPTURE_REASON_NONE) {
             result->haptic = GUMI_CAPTURE_HAPTIC_RECORDING_STOPPED;
         } else if (kind == STOP_BASE_DURABILITY || kind == STOP_SAFETY_PRIVACY) {
+            result->haptic = GUMI_CAPTURE_HAPTIC_FAULT;
+        } else if (state->stop_reason != GUMI_CAPTURE_REASON_NONE) {
             result->haptic = GUMI_CAPTURE_HAPTIC_FAULT;
         }
     }
@@ -880,6 +946,7 @@ static gumi_capture_status finish_stop(
 
     state->voice = GUMI_CAPTURE_VOICE_INACTIVE;
     state->voice_audio_permitted = false;
+    state->local_recording_open = false;
     if (preserve_base) {
         state->phase = GUMI_CAPTURE_PHASE_BASE_ACTIVE;
         state->mic_truth = GUMI_CAPTURE_MIC_ACQUIRED;
@@ -914,24 +981,30 @@ static gumi_capture_status complete_stop(
         case GUMI_CAPTURE_COMPLETION_LOCAL_RECORDING_FINALIZED:
             if (!state->stop_wait_finalize) return GUMI_CAPTURE_STATUS_INVALID_STATE;
             state->stop_wait_finalize = false;
-            state->stop_wait_microphone_release = true;
-            status = emit_action(
-                result,
-                at_ms,
-                state->transition_id,
-                GUMI_CAPTURE_ACTION_RELEASE_MICROPHONE
+            state->local_recording_open = false;
+            status = ensure_microphone_release_requested(
+                state, at_ms, result
+            );
+            if (status != GUMI_CAPTURE_STATUS_OK) return status;
+            break;
+        case GUMI_CAPTURE_COMPLETION_LOCAL_RECORDING_INTERRUPTED:
+            if (!state->stop_wait_finalize) return GUMI_CAPTURE_STATUS_INVALID_STATE;
+            state->stop_wait_finalize = false;
+            state->local_recording_open = false;
+            state->stop_reason =
+                GUMI_CAPTURE_REASON_LOCAL_DURABILITY_UNAVAILABLE;
+            state->fault = GUMI_CAPTURE_FAULT_RECOVERABLE;
+            status = ensure_microphone_release_requested(
+                state, at_ms, result
             );
             if (status != GUMI_CAPTURE_STATUS_OK) return status;
             break;
         case GUMI_CAPTURE_COMPLETION_LAST_DURABLE_FRAME_COMMITTED:
             if (!state->stop_wait_durable_boundary) return GUMI_CAPTURE_STATUS_INVALID_STATE;
             state->stop_wait_durable_boundary = false;
-            state->stop_wait_microphone_release = true;
-            status = emit_action(
-                result,
-                at_ms,
-                state->transition_id,
-                GUMI_CAPTURE_ACTION_RELEASE_MICROPHONE
+            state->local_recording_open = false;
+            status = ensure_microphone_release_requested(
+                state, at_ms, result
             );
             if (status != GUMI_CAPTURE_STATUS_OK) return status;
             break;
@@ -1071,6 +1144,7 @@ gumi_capture_status gumi_capture_complete(
                     return GUMI_CAPTURE_STATUS_INVALID_STATE;
                 }
                 next.local_durability_ready = true;
+                next.local_recording_open = true;
                 status = GUMI_CAPTURE_STATUS_OK;
                 break;
             case GUMI_CAPTURE_COMPLETION_LOCAL_DURABILITY_FAILED:
@@ -1133,6 +1207,95 @@ gumi_capture_status gumi_capture_complete(
     return commit_state(state, &next, result, &next_result);
 }
 
+static gumi_capture_status begin_recoverable_pipeline_stop(
+    gumi_capture_supervisor *next,
+    uint64_t at_ms,
+    gumi_capture_reason reason,
+    gumi_capture_result *result
+)
+{
+    gumi_capture_status status;
+
+    next->fault = GUMI_CAPTURE_FAULT_RECOVERABLE;
+    if (next->phase == GUMI_CAPTURE_PHASE_BASE_ACTIVE ||
+        next->phase == GUMI_CAPTURE_PHASE_VOICE_OVERLAY_ACTIVE ||
+        next->phase == GUMI_CAPTURE_PHASE_STARTING_VOICE_OVERLAY) {
+        status = start_stop(
+            next,
+            at_ms,
+            STOP_BASE_DURABILITY,
+            reason,
+            true,
+            result
+        );
+        if (status != GUMI_CAPTURE_STATUS_OK) return status;
+        return emit_event(
+            result,
+            at_ms,
+            next->transition_id,
+            next->stopping_recording_id,
+            GUMI_CAPTURE_EVENT_SAFE_CAPTURE_STOP_REQUESTED,
+            reason
+        );
+    }
+    if (next->phase == GUMI_CAPTURE_PHASE_VOICE_IDLE_ACTIVE) {
+        status = start_stop(
+            next,
+            at_ms,
+            STOP_VOICE_IDLE_ACTIVE,
+            reason,
+            true,
+            result
+        );
+        if (status != GUMI_CAPTURE_STATUS_OK) return status;
+        return emit_event(
+            result,
+            at_ms,
+            next->transition_id,
+            0U,
+            GUMI_CAPTURE_EVENT_SAFE_CAPTURE_STOP_REQUESTED,
+            reason
+        );
+    }
+    if (next->phase == GUMI_CAPTURE_PHASE_STARTING_BASE) {
+        status = emit_event(
+            result,
+            at_ms,
+            next->transition_id,
+            0U,
+            GUMI_CAPTURE_EVENT_BASE_RECORDING_REFUSED,
+            reason
+        );
+        if (status != GUMI_CAPTURE_STATUS_OK) return status;
+        result->haptic = GUMI_CAPTURE_HAPTIC_FAULT;
+        if (next->privacy_guard_asserted) {
+            next->transition_id = UINT64_C(0);
+            status = allocate_transition(next);
+            if (status != GUMI_CAPTURE_STATUS_OK) return status;
+            status = start_stop(
+                next,
+                at_ms,
+                STOP_BASE_START_CANCELLED,
+                reason,
+                false,
+                result
+            );
+            if (status != GUMI_CAPTURE_STATUS_OK) return status;
+        } else {
+            next->transition_id = UINT64_C(0);
+            next->phase = GUMI_CAPTURE_PHASE_IDLE;
+            clear_start_flags(next);
+        }
+        return GUMI_CAPTURE_STATUS_OK;
+    }
+    if (next->phase == GUMI_CAPTURE_PHASE_STARTING_VOICE_IDLE) {
+        status = cancel_starting_voice(next, at_ms, reason, true, result);
+        if (status != GUMI_CAPTURE_STATUS_OK) return status;
+        result->haptic = GUMI_CAPTURE_HAPTIC_FAULT;
+    }
+    return GUMI_CAPTURE_STATUS_OK;
+}
+
 gumi_capture_status gumi_capture_set_storage_state(
     gumi_capture_supervisor *state,
     uint64_t at_ms,
@@ -1151,86 +1314,48 @@ gumi_capture_status gumi_capture_set_storage_state(
     clear_result(&next_result);
     next.current_ms = at_ms;
     next.storage = storage;
-    if (storage == GUMI_CAPTURE_STORAGE_FULL || storage == GUMI_CAPTURE_STORAGE_CORRUPT) {
+    if (storage == GUMI_CAPTURE_STORAGE_FULL ||
+        storage == GUMI_CAPTURE_STORAGE_CORRUPT) {
         reason = storage == GUMI_CAPTURE_STORAGE_CORRUPT
             ? GUMI_CAPTURE_REASON_STORAGE_CORRUPT
             : GUMI_CAPTURE_REASON_LOCAL_DURABILITY_UNAVAILABLE;
-        next.fault = GUMI_CAPTURE_FAULT_RECOVERABLE;
-        if (next.phase == GUMI_CAPTURE_PHASE_BASE_ACTIVE ||
-            next.phase == GUMI_CAPTURE_PHASE_VOICE_OVERLAY_ACTIVE ||
-            next.phase == GUMI_CAPTURE_PHASE_STARTING_VOICE_OVERLAY) {
-            status = start_stop(
-                &next,
-                at_ms,
-                STOP_BASE_DURABILITY,
-                reason,
-                true,
-                &next_result
-            );
-            if (status != GUMI_CAPTURE_STATUS_OK) return status;
-            status = emit_event(
-                &next_result,
-                at_ms,
-                next.transition_id,
-                next.stopping_recording_id,
-                GUMI_CAPTURE_EVENT_SAFE_CAPTURE_STOP_REQUESTED,
-                reason
-            );
-            if (status != GUMI_CAPTURE_STATUS_OK) return status;
-        } else if (next.phase == GUMI_CAPTURE_PHASE_VOICE_IDLE_ACTIVE) {
-            status = start_stop(
-                &next,
-                at_ms,
-                STOP_VOICE_IDLE_ACTIVE,
-                reason,
-                true,
-                &next_result
-            );
-            if (status != GUMI_CAPTURE_STATUS_OK) return status;
-            status = emit_event(
-                &next_result,
-                at_ms,
-                next.transition_id,
-                0U,
-                GUMI_CAPTURE_EVENT_SAFE_CAPTURE_STOP_REQUESTED,
-                reason
-            );
-            if (status != GUMI_CAPTURE_STATUS_OK) return status;
-        } else if (next.phase == GUMI_CAPTURE_PHASE_STARTING_BASE) {
-            status = emit_event(
-                &next_result,
-                at_ms,
-                next.transition_id,
-                0U,
-                GUMI_CAPTURE_EVENT_BASE_RECORDING_REFUSED,
-                reason
-            );
-            if (status != GUMI_CAPTURE_STATUS_OK) return status;
-            next_result.haptic = GUMI_CAPTURE_HAPTIC_FAULT;
-            if (next.privacy_guard_asserted) {
-                next.transition_id = UINT64_C(0);
-                status = allocate_transition(&next);
-                if (status != GUMI_CAPTURE_STATUS_OK) return status;
-                status = start_stop(
-                    &next,
-                    at_ms,
-                    STOP_BASE_START_CANCELLED,
-                    reason,
-                    false,
-                    &next_result
-                );
-                if (status != GUMI_CAPTURE_STATUS_OK) return status;
-            } else {
-                next.transition_id = UINT64_C(0);
-                next.phase = GUMI_CAPTURE_PHASE_IDLE;
-                clear_start_flags(&next);
-            }
-        } else if (next.phase == GUMI_CAPTURE_PHASE_STARTING_VOICE_IDLE) {
-            status = cancel_starting_voice(&next, at_ms, reason, true, &next_result);
-            if (status != GUMI_CAPTURE_STATUS_OK) return status;
-            next_result.haptic = GUMI_CAPTURE_HAPTIC_FAULT;
-        }
+        status = begin_recoverable_pipeline_stop(
+            &next,
+            at_ms,
+            reason,
+            &next_result
+        );
+        if (status != GUMI_CAPTURE_STATUS_OK) return status;
     }
+    return commit_state(state, &next, result, &next_result);
+}
+
+gumi_capture_status gumi_capture_recoverable_pipeline_failed(
+    gumi_capture_supervisor *state,
+    uint64_t at_ms,
+    gumi_capture_reason reason,
+    gumi_capture_result *result
+)
+{
+    gumi_capture_supervisor next;
+    gumi_capture_result next_result;
+    gumi_capture_status status = validate_call(state, at_ms, result);
+
+    if (status != GUMI_CAPTURE_STATUS_OK) return status;
+    if (reason != GUMI_CAPTURE_REASON_MICROPHONE_UNAVAILABLE &&
+        reason != GUMI_CAPTURE_REASON_LOCAL_DURABILITY_UNAVAILABLE) {
+        return GUMI_CAPTURE_STATUS_INVALID_ARGUMENT;
+    }
+    next = *state;
+    clear_result(&next_result);
+    next.current_ms = at_ms;
+    status = begin_recoverable_pipeline_stop(
+        &next,
+        at_ms,
+        reason,
+        &next_result
+    );
+    if (status != GUMI_CAPTURE_STATUS_OK) return status;
     return commit_state(state, &next, result, &next_result);
 }
 
@@ -1310,7 +1435,8 @@ gumi_capture_status gumi_capture_watchdog_boot(
         ? next.active_recording_id
         : next.stopping_recording_id;
     interrupted = next.mic_truth != GUMI_CAPTURE_MIC_VERIFIED_OFF ||
-        next.base_recording_active || next.voice != GUMI_CAPTURE_VOICE_INACTIVE;
+        next.base_recording_active || next.local_recording_open ||
+        next.voice != GUMI_CAPTURE_VOICE_INACTIVE;
 
     next.current_ms = at_ms;
     next.transition_id = 0U;
@@ -1324,6 +1450,7 @@ gumi_capture_status gumi_capture_watchdog_boot(
     next.voice_audio_permitted = false;
     next.privacy_output_healthy = false;
     next.privacy_guard_asserted = false;
+    next.local_recording_open = false;
     next.fault = GUMI_CAPTURE_FAULT_NONE;
     next.maintenance_exclusive = false;
     clear_start_flags(&next);

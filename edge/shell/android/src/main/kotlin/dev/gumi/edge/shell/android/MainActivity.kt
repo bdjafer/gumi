@@ -1151,6 +1151,17 @@ private fun FirmwareImageProbePanel(
                             color = MaterialTheme.colorScheme.tertiary,
                         )
 
+                    OmiCv1FirmwareOracleStatus.MATCHES_GUMI_RECOVERY_ONLY_0001 ->
+                        Text("• Application and network hashes match recovery-only-0001")
+
+                    OmiCv1FirmwareOracleStatus.GUMI_RECOVERY_APPLICATION_MATCH_NETWORK_UNOBSERVED ->
+                        Text(
+                            "• The application exactly matches recovery-only-0001; MCU Manager " +
+                                "did not expose the network image. Require the exact recovery " +
+                                "status and fail-closed GATT topology before qualification.",
+                            color = MaterialTheme.colorScheme.tertiary,
+                        )
+
                     else -> Unit
                 }
                 if (oracle.findings.isNotEmpty()) {
@@ -1163,7 +1174,9 @@ private fun FirmwareImageProbePanel(
                                 oracle.status ==
                                 OmiCv1FirmwareOracleStatus.APPLICATION_MATCH_NETWORK_UNOBSERVED ||
                                 oracle.status ==
-                                OmiCv1FirmwareOracleStatus.GUMI_CANARY_APPLICATION_MATCH_NETWORK_UNOBSERVED
+                                OmiCv1FirmwareOracleStatus.GUMI_CANARY_APPLICATION_MATCH_NETWORK_UNOBSERVED ||
+                                oracle.status ==
+                                OmiCv1FirmwareOracleStatus.GUMI_RECOVERY_APPLICATION_MATCH_NETWORK_UNOBSERVED
                             ) {
                                 MaterialTheme.colorScheme.tertiary
                             } else {
@@ -1254,6 +1267,19 @@ private fun GattEvidence(evidence: OmiCv1GattEvidence) {
         null -> Text("Storage status: unavailable")
     }
     evidence.storageRawHex?.let { rawHex -> Text("Storage raw hex: $rawHex") }
+    Text(
+        "Recovery status: ${evidence.recoveryStatusRawHex ?: "unavailable"}" +
+            if (evidence.recoveryStatusRawHex == "01070123") {
+                " (transport ready, microphone off, capture denied, overwrite-only)"
+            } else {
+                ""
+            },
+        color = if (evidence.recoveryStatusRawHex == "01070123") {
+            MaterialTheme.colorScheme.tertiary
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        },
+    )
     if (evidence.readFailures.isNotEmpty()) {
         Text(
             "Allowlisted read failures: " +

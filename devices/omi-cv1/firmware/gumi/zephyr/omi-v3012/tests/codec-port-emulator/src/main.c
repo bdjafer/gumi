@@ -100,6 +100,7 @@ ZTEST(codec_port_lifecycle, test_session_reset_and_close_barriers)
 {
     gumi_omi_v3012_codec_close_result result;
     uint64_t callback_barrier_count;
+    unsigned int barrier_yield;
     unsigned int cycle;
     int error;
 
@@ -141,7 +142,9 @@ ZTEST(codec_port_lifecycle, test_session_reset_and_close_barriers)
     first_packet_size = current_first_packet_size;
     memcpy(first_packet, current_first_packet, first_packet_size);
     callback_barrier_count = callback_count;
-    k_msleep(20);
+    for (barrier_yield = 0U; barrier_yield < 32U; barrier_yield += 1U) {
+        k_yield();
+    }
     zassert_equal(
         callback_count,
         callback_barrier_count,

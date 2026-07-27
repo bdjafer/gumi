@@ -3,6 +3,7 @@ package dev.gumi.edge.runtime.operational
 import dev.gumi.edge.runtime.host.RuntimeHostOperation
 import dev.gumi.edge.sdk.DeviceId
 import dev.gumi.edge.sdk.ExpectedFailure
+import dev.gumi.edge.sdk.capability.capture.DeviceCaptureState
 import dev.gumi.edge.sdk.capability.power.PowerStatus
 
 enum class OperationalRuntimeLifecycle {
@@ -41,9 +42,9 @@ enum class OperationalBacklogScope {
     EDGE_HOST,
 }
 
-/** This slice has no authority to infer a microphone, ring-buffer, or capture state. */
 enum class OperationalCaptureTruth {
     UNVERIFIED,
+    DEVICE_REPORTED,
 }
 
 data class OperationalBacklog(
@@ -80,6 +81,10 @@ data class OperationalRuntimeProjection(
     val deviceId: DeviceId? = null,
     val link: OperationalLinkState = OperationalLinkState.UNKNOWN,
     val capture: OperationalCaptureTruth = OperationalCaptureTruth.UNVERIFIED,
+    /** Last accepted device observation; retained conservatively after disconnect. */
+    val captureState: DeviceCaptureState? = null,
+    /** Process-lineage revision, independent from a device protocol's wrapping generation. */
+    val captureObservationRevision: ULong = 0uL,
     val power: PowerStatus? = null,
     /** Advances only when a concrete device power observation is accepted for this session. */
     val powerObservationRevision: ULong = 0uL,
@@ -97,6 +102,14 @@ data class OperationalRuntimeProjection(
         require(sequence >= 0L) { "Operational runtime sequence cannot be negative" }
         require((power == null) == (powerObservationRevision == 0uL)) {
             "Operational power value and observation revision must be present together"
+        }
+        require((captureState == null) == (captureObservationRevision == 0uL)) {
+            "Operational capture value and observation revision must be present together"
+        }
+        require(
+            capture != OperationalCaptureTruth.DEVICE_REPORTED || captureState != null,
+        ) {
+            "Device-reported operational capture truth needs a concrete observation"
         }
         if (lifecycle == OperationalRuntimeLifecycle.READY) {
             require(ownerOperation != null && deviceId != null) {

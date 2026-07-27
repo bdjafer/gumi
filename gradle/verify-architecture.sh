@@ -109,7 +109,7 @@ check_project_dependencies \
 check_project_dependencies "devices/omi-cv1/edge-driver/build.gradle.kts" ":edge:sdk"
 check_project_dependencies \
     "devices/omi-cv1/application-updater/android/build.gradle.kts" \
-    ":edge:sdk :devices:omi-cv1:edge-driver"
+    ":edge:sdk :edge:platforms:android :devices:omi-cv1:edge-driver"
 check_project_dependencies \
     "devices/omi-cv1/simulator/build.gradle.kts" \
     ":edge:sdk :devices:omi-cv1:edge-driver"
@@ -173,6 +173,7 @@ done
 updater_sources='devices/omi-cv1/application-updater/android/src/main'
 allowed_updater='devices/omi-cv1/application-updater/android/src/main/kotlin/dev/gumi/devices/omicv1/updater/android/AndroidOmiCv1ApplicationImage0Session.kt'
 allowed_updater_executor='devices/omi-cv1/application-updater/android/src/main/kotlin/dev/gumi/devices/omicv1/updater/android/OmiCv1ApplicationImage0UpdateExecutor.kt'
+allowed_stock_normalizer='devices/omi-cv1/application-updater/android/src/main/kotlin/dev/gumi/devices/omicv1/updater/android/AndroidOmiCv1StockNormalizationSession.kt'
 updater_management_files=$(
     rg --files-with-matches --glob '*.kt' \
         '\b(ImageManager|DefaultManager|FirmwareUpgradeManager)\b|\.(upload|test|confirm|erase|reset)\s*\(' \
@@ -180,19 +181,56 @@ updater_management_files=$(
 )
 for source_file in $updater_management_files; do
     case "$source_file" in
-        "$allowed_updater" | "$allowed_updater_executor") ;;
+        "$allowed_updater" | "$allowed_updater_executor" | "$allowed_stock_normalizer") ;;
         *)
-            echo "$source_file: update mutation is allowed only in the reviewed image-0 adapter/executor" >&2
+            echo "$source_file: update mutation is allowed only in the reviewed firmware adapters/executor" >&2
             violations=1
             ;;
     esac
 done
 
+updater_multi_image_files=$(
+    rg --files-with-matches --glob '*.kt' \
+        '\b(ImageSet|TargetImage|FirmwareUpgradeManager)\b' \
+        "$updater_sources" || true
+)
+for source_file in $updater_multi_image_files; do
+    if [ "$source_file" != "$allowed_stock_normalizer" ]; then
+        echo "$source_file: multi-image update is allowed only in the reviewed stock normalizer" >&2
+        violations=1
+    fi
+done
+
 if rg --line-number --glob '*.kt' \
-    '\b(BasicManager|CrashManager|FsManager|LogManager|SUITManager|SettingsManager|ShellManager|StatsManager|ImageSet|TargetImage|FirmwareUpgradeManager)\b|\.(erase|test|slots|coreList|coreLoad|coreErase|coreDownload)\s*\(' \
+    '\b(BasicManager|CrashManager|FsManager|LogManager|SUITManager|SettingsManager|ShellManager|StatsManager)\b|\.(test|slots|coreList|coreLoad|coreErase|coreDownload)\s*\(' \
     "$updater_sources"; then
-    echo "$updater_sources: broader MCU Manager surfaces are forbidden in the image-0 updater" >&2
+    echo "$updater_sources: broader MCU Manager surfaces are forbidden in the closed updater" >&2
     violations=1
+fi
+
+updater_erase_files=$(
+    rg --files-with-matches --glob '*.kt' '\.erase\s*\(' "$updater_sources" || true
+)
+for source_file in $updater_erase_files; do
+    if [ "$source_file" != "$allowed_updater" ]; then
+        echo "$source_file: erase is allowed only in the reviewed application image-0 adapter" >&2
+        violations=1
+    fi
+done
+
+if [ -f "$allowed_updater" ]; then
+    invalid_allowed_erase=$(
+        rg --line-number '\.erase\s*\(' "$allowed_updater" |
+            rg -v 'imageManager\.erase\s*\(' || true
+    )
+    allowed_erase_count=$(
+        rg --count 'imageManager\.erase\s*\(' "$allowed_updater" || true
+    )
+    if [ -n "$invalid_allowed_erase" ] || [ "${allowed_erase_count:-0}" -gt 1 ]; then
+        printf '%s\n' "$invalid_allowed_erase" >&2
+        echo "$allowed_updater: only one explicit imageManager.erase(slot) call is allowed" >&2
+        violations=1
+    fi
 fi
 
 if [ "$violations" -ne 0 ]; then

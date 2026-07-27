@@ -5,5 +5,5 @@ tests:
       - omi_cv1
       - codec
     platform_allow:
-      - mps2/an521/cpu0
+      - mps3/an547
     harness: ztest

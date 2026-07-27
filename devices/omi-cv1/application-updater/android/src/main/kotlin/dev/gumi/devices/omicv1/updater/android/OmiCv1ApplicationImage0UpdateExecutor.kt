@@ -11,8 +11,13 @@ internal fun interface MonotonicMillisClock {
 }
 
 internal interface OmiCv1ApplicationImage0UpdateSession {
-    suspend fun upload(imageBytes: ByteArray, onProgress: (sent: Int, total: Int) -> Unit)
+    suspend fun upload(
+        imageBytes: ByteArray,
+        mode: OmiCv1ApplicationUploadMode,
+        onProgress: (sent: Int, total: Int) -> Unit,
+    )
     suspend fun inspect(): FirmwareImageStateInspection
+    suspend fun eraseInactiveApplicationSlot()
     suspend fun confirm(mcubootImageHash: FirmwareImageHash)
     suspend fun requestReset(): Boolean
     fun cancel()
@@ -54,7 +59,7 @@ internal class OmiCv1ApplicationImage0UpdateExecutor(
                     totalBytes = plan.artifactEvidence.fileSizeBytes,
                 ),
             )
-            session.upload(plan.copyImageBytes()) { sent, total ->
+            session.upload(plan.copyImageBytes(), plan.release.uploadMode) { sent, total ->
                 onProgress(
                     OmiCv1ApplicationUpdateProgress(
                         stage = OmiCv1ApplicationUpdateStage.UPLOADING,

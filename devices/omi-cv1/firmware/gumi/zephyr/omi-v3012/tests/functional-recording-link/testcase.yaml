@@ -1,0 +1,9 @@
+tests:
+  gumi.omi_v3012.functional_recording_link:
+    build_only: true
+    platform_allow:
+      - omi/nrf5340/cpuapp
+    tags:
+      - gumi
+      - omi
+      - functional

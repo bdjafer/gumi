@@ -144,11 +144,16 @@ review unless the owner provides a new explicit go/no-go. The future sequence is
 3. prepare and review an Android updater that targets image `0` without writing image `1`, without
    invoking it against the pendant;
 4. only after the first explicit go/no-go, install the exact byte-different Gumi v3.0.12 canary and
-   verify the canary application hash plus the unchanged network hash;
+   verify the canary application hash under Decision 0005's explicit network-evidence policy;
 5. only after a subsequent recovery go/no-go, install the exact official v3.0.12 application from the
-   canary source state and verify both published image hashes;
+   canary source state and verify the stock application under the same policy;
 6. under a later separate approval, repeat the canary transition; and
 7. proceed to functional capture changes only after the application-only round trip is repeatable.
+
+Steps 1–5 completed on the owned unit on 2026-07-20. Both application hashes were freshly observed in
+their expected active/bootable/confirmed/not-pending states, but image `1` remained wholly unobserved;
+no unchanged network hash is claimed. Step 6 repeatability and any physical behavior-changing image
+remain separate gates.
 
 An official-stock-to-identical-stock operation is not used as qualification because the maintained
 high-level updater skips an already-active hash and lower-level confirmation is hash-addressed.

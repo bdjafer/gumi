@@ -95,9 +95,93 @@ devices/omi-cv1/firmware/gumi/crypto-port-api.test.sh /path/to/ncs-v2.9.0
 That is an API syntax gate only. A target link, AES-GCM known-answer test, persistent/derived-key reboot
 test, and real recording recovery remain required.
 
-## Integration boundary
+## Interaction policy and semantic signals
 
-Do not add this source to the identity-only `canary-0001` patch. The first functional overlay will be a
-separate reviewed stage and must still prove repeatable microphone stop/start, codec/ring-buffer reset,
-durable-boundary behavior, privacy-indicator arbitration, and boot-with-microphone-off before it can be
-considered for an update manifest.
+[`include/gumi/interaction_policy.h`](include/gumi/interaction_policy.h) and
+[`src/interaction_policy.c`](src/interaction_policy.c) are the policy layer between semantic button
+events and capture-coordinator intents. They own no GPIO, microphone, privacy output, storage, BLE, or
+cloud effect, and they retain no shadow recording state. Every evaluation consumes current
+coordinator-owned facts.
+
+Two versioned profiles prove that the same input and capture kernels can support different products:
+the manual profile maps double tap to a live-state Recording toggle and hold to a VoiceAction; the
+continuous profile never toggles Recording and maps hold to a recording-correlated interpretation
+marker. [`semantic_signal.h`](include/gumi/semantic_signal.h) tracks that marker as data with exact
+signal, recording, and time identity and interrupts it at the recording boundary.
+
+```sh
+devices/omi-cv1/firmware/gumi/interaction-policy.test.sh
+```
+
+`functional-recording-0003` remains frozen and does not link these vNext modules. Its embedded manual
+mapping is behavior-equivalent but structurally older. Shipping a profile through target firmware
+requires a new manifest, signed artifact, source/link audit, and physical qualification; a policy
+profile is never a runtime switch hidden in reserved bytes.
+
+## Recovery supervisor
+
+[`include/gumi/recovery.h`](include/gumi/recovery.h) and [`src/recovery.c`](src/recovery.c) implement the
+portable recovery-first boot state machine. Recovery transport is always requested before any other
+action, capture admission defaults false, and explicit/persisted/watchdog safe-mode evidence prevents
+functional-service enablement. Runtime faults revoke capture synchronously before platform quiescence;
+transition IDs reject stale asynchronous completions.
+
+The four-byte read-only wire status is `[schema, phase, reason, flags]`. Flags report recovery transport,
+microphone-off proof, functional readiness/capture admission, and the observed overwrite-only boot
+policy. The recovery-only-0001 steady value is `01070123`.
+
+```sh
+devices/omi-cv1/firmware/gumi/recovery-kernel.test.sh
+```
+
+The strict C11 plus ASan/UBSan host gate runs 11 transition, fail-closed, stale-completion, and wire
+encoding cases. The Omi-specific adapter under [`zephyr/omi-v3012/`](zephyr/omi-v3012/) starts only
+BLE/SMP, Device Information, the empty stock-family identity service, and Gumi recovery status. It
+configures PDM without `DMIC_TRIGGER_START`, rejects image numbers other than application image `0`,
+and links no functional stock source. Exact target-build and signed-image qualification remain separate
+gates from this portable test.
+
+## Capture-port self-test supervisor
+
+[`include/gumi/capture_selftest.h`](include/gumi/capture_selftest.h) and
+[`src/capture_selftest.c`](src/capture_selftest.c) define the diagnostic stage between recovery-only and
+product capture. A phone arm creates one exact 15-second lease; a separately proven two-second device
+hold sequences privacy red, a fresh Opus encoder, PDM acquisition, a bounded three-second exercise,
+verified PDM release, codec drain, and privacy removal. Only counters and lifecycle truth are retained.
+No audio byte, storage operation, Recording command, or VoiceTurn exists in this kernel.
+
+Microphone-release uncertainty is terminal and keeps privacy asserted. Every platform effect carries a
+transaction ID, stale completions are rejected transactionally, and safe failures clean up in the fixed
+microphone then codec then privacy order. Run the allocation-free host gate with:
+
+```sh
+devices/omi-cv1/firmware/gumi/capture-selftest-kernel.test.sh
+```
+
+This is not a functional firmware acceptance result. The target adapter, exact linked-source audit,
+signed image, phone probe, and controlled physical qualification in
+[`docs/decisions/0007-omi-cv1-capture-port-selftest.md`](../../../../../docs/decisions/0007-omi-cv1-capture-port-selftest.md)
+remain separate gates.
+
+## Functional composition boundary
+
+`functional-recording-0007` is the current reviewed overlay that composes these kernels with the
+Omi-specific microphone, codec, privacy, MEXT-derived-key, non-formatting FATFS, and read-only GATT
+ports. It retains the frozen v0003 behavior and v0004's bounded 4096-byte Mbed TLS allocator, then
+normalizes only the exact SPI-SD driver's no-PM-callback `-ENOSYS` result before mount. Unsupported
+states and real storage failures remain fail-closed. It proves source and local lifecycle boundaries
+without changing the identity-only canary or recovery-only graphs. V0006 additionally owns one narrow
+nRF5340 reset port: the application force-cycles the network core before BLE startup and forces that
+core off before an application cold reset. This prevents the app-only reset/stale-controller lockup
+physically observed after v0005 otherwise completed recording successfully.
+V0007 refreshes FAT capacity before attempting the recording-directory create and reports `-ENOSPC`
+directly when the volume is full. The separate legacy-storage-reclaimer kernel admits deletion only
+for the compiled exact path, regular-file type, and 505,118,720-byte size; its four-case host gate
+proves exact deletion, already-absent success with sufficient free space, wrong-size refusal, and
+wrong-type refusal.
+
+The signed functional release is still a physical candidate, not hardware proof. Its first-device gate
+must first establish terminal status-only MEXT provisioning, then boot-with-microphone-off, repeatable
+codec/microphone lifecycle, continuous privacy indication, authenticated durable stop, exact read-only
+state, the five-second maintenance admission, and the 12-second reset escape. Live transport, export,
+remote capture, and VoiceTurn remain outside this version.

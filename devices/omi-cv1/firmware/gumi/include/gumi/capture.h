@@ -153,6 +153,11 @@ typedef enum {
     GUMI_CAPTURE_COMPLETION_REALTIME_ROUTE_READY,
     GUMI_CAPTURE_COMPLETION_REALTIME_ROUTE_FAILED,
     GUMI_CAPTURE_COMPLETION_LOCAL_RECORDING_FINALIZED,
+    /*
+     * Normal finalization failed, but the adapter stopped new packets and
+     * durably closed the last authenticated prefix as an interrupted .PRT.
+     */
+    GUMI_CAPTURE_COMPLETION_LOCAL_RECORDING_INTERRUPTED,
     GUMI_CAPTURE_COMPLETION_LAST_DURABLE_FRAME_COMMITTED,
     GUMI_CAPTURE_COMPLETION_REALTIME_ROUTE_CLOSED,
     GUMI_CAPTURE_COMPLETION_MICROPHONE_RELEASED,
@@ -191,6 +196,7 @@ typedef struct {
     bool privacy_guard_asserted;
     bool microphone_acquired;
     bool local_durability_ready;
+    bool local_recording_open;
     bool realtime_route_ready;
     bool realtime_action_issued;
     bool stop_wait_finalize;
@@ -254,6 +260,17 @@ gumi_capture_status gumi_capture_set_storage_state(
     gumi_capture_supervisor *state,
     uint64_t at_ms,
     gumi_capture_storage_state storage,
+    gumi_capture_result *result
+);
+
+/*
+ * Reports a recoverable microphone or codec/durability-pipeline failure
+ * without falsifying the physical storage-health field.
+ */
+gumi_capture_status gumi_capture_recoverable_pipeline_failed(
+    gumi_capture_supervisor *state,
+    uint64_t at_ms,
+    gumi_capture_reason reason,
     gumi_capture_result *result
 );
 

@@ -159,3 +159,12 @@ internal object McubootApplicationArtifactInspector {
 
     private const val OFFICIAL_HEADER_SIZE = 512
 }
+
+/** Generic facade used by verified application and network-core MCUboot artifacts. */
+internal object McubootArtifactInspector {
+    fun inspect(
+        sourceBytes: ByteArray,
+        manifest: OmiCv1McubootArtifactManifest,
+    ): OmiCv1McubootArtifactEvidence =
+        McubootApplicationArtifactInspector.inspect(sourceBytes, manifest)
+}
